@@ -1,4 +1,7 @@
+﻿from django.core.validators import MinValueValidator
 from django.db import models
+from django.urls import reverse
+from django.utils import timezone
 
 
 class Project(models.Model):
@@ -55,6 +58,16 @@ class GKSheet(models.Model):
     def __str__(self) -> str:
         return f"{self.project.name} / {self.date:%Y-%m-%d} ({self.get_status_display()})"
 
+    def get_absolute_url(self) -> str:
+        return reverse("core:sheet-detail", args=[self.pk])
+
+    @property
+    def is_draft(self) -> bool:
+        return self.status == self.Status.DRAFT
+
+    def has_entries(self) -> bool:
+        return self.entries.exists()
+
 
 class GKEntry(models.Model):
     sheet = models.ForeignKey(
@@ -67,7 +80,11 @@ class GKEntry(models.Model):
         related_name="entries",
         on_delete=models.PROTECT,
     )
-    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
     comment = models.TextField(blank=True)
 
     class Meta:
@@ -98,3 +115,5 @@ class ReviewToken(models.Model):
     def __str__(self) -> str:
         return f"{self.get_token_type_display()} for {self.sheet}"
 
+    def is_valid(self) -> bool:
+        return not self.used and self.expires_at >= timezone.now()

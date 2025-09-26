@@ -1,0 +1,106 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">{{ title }}</h1>
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
+    {% endif %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label" for="id_project">Projekat</label>
+            {{ form.project }}
+            {% if form.project.errors %}
+                <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="id_date">Datum</label>
+            {{ form.date }}
+            {% if form.date.errors %}
+                <div class="invalid-feedback d-block">{{ form.date.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="id_note">Napomena</label>
+            {{ form.note }}
+            {% if form.note.errors %}
+                <div class="invalid-feedback d-block">{{ form.note.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="id_review_note">Komentar nadzora</label>
+            {{ form.review_note }}
+            {% if form.review_note.errors %}
+                <div class="invalid-feedback d-block">{{ form.review_note.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <h2 class="h5">Stavke</h2>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors|join:' ' }}</div>
+    {% endif %}
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">BoQ stavka</th>
+                    <th scope="col">Količina</th>
+                    <th scope="col">Komentar</th>
+                    {% if formset.can_delete %}
+                        <th scope="col" class="text-center">Obriši</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry_form in formset %}
+                    <tr>
+                        {% for hidden in entry_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        <td>
+                            {{ entry_form.boq_item }}
+                            {% if entry_form.boq_item.errors %}
+                                <div class="invalid-feedback d-block">{{ entry_form.boq_item.errors|join:', ' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ entry_form.quantity }}
+                            {% if entry_form.quantity.errors %}
+                                <div class="invalid-feedback d-block">{{ entry_form.quantity.errors|join:', ' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ entry_form.comment }}
+                            {% if entry_form.comment.errors %}
+                                <div class="invalid-feedback d-block">{{ entry_form.comment.errors|join:', ' }}</div>
+                            {% endif %}
+                            {% if entry_form.non_field_errors %}
+                                <div class="invalid-feedback d-block">{{ entry_form.non_field_errors|join:', ' }}</div>
+                            {% endif %}
+                        </td>
+                        {% if formset.can_delete %}
+                            <td class="text-center">
+                                <div class="form-check justify-content-center d-flex">
+                                    {{ entry_form.DELETE }}
+                                    <label class="form-check-label ms-2" for="{{ entry_form.DELETE.id_for_label }}">Ukloni</label>
+                                </div>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Sačuvaj</button>
+        {% if sheet %}
+            <a class="btn btn-outline-secondary" href="{{ sheet.get_absolute_url }}">Otkaži</a>
+        {% else %}
+            <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Otkaži</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
