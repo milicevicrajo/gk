@@ -1,39 +1,92 @@
-﻿<!DOCTYPE html>
+{% load static %}
+<!DOCTYPE html>
 <html lang="sr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Građevinska knjiga{% endblock %}</title>
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous"
-    >
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-free/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/sb-admin-2.min.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
-<body>
-<nav class="navbar navbar-expand-lg bg-body-tertiary mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="{%- url 'core:sheet-list' -%}">Građevinska knjiga</a>
-        <span class="text-body-secondary">Navbar placeholder</span>
-    </div>
-</nav>
-<main class="container">
-    {% if messages %}
-        <div class="mb-3">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
+<body id="page-top">
+<div id="wrapper">
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{% url 'core:sheet-list' %}">
+            <div class="sidebar-brand-icon rotate-n-15">
+                <i class="fas fa-hard-hat"></i>
+            </div>
+            <div class="sidebar-brand-text mx-3">GK</div>
+        </a>
+        <hr class="sidebar-divider my-0">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:sheet-list' %}">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Građevinske knjige</span>
+            </a>
+        </li>
+        {% block sidebar_extra %}{% endblock %}
+        <hr class="sidebar-divider d-none d-md-block">
+        <div class="text-center d-none d-md-inline">
+            <button class="rounded-circle border-0" id="sidebarToggle"></button>
         </div>
-    {% endif %}
-    {% block content %}{% endblock %}
-</main>
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-    crossorigin="anonymous"
-></script>
+    </ul>
+    <div id="content-wrapper" class="d-flex flex-column">
+        <div id="content">
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                    <i class="fa fa-bars"></i>
+                </button>
+                <ul class="navbar-nav ml-auto">
+                    {% if request.user.is_authenticated %}
+                        <li class="nav-item d-flex align-items-center text-gray-600 small">
+                            <i class="fas fa-user-circle fa-lg mr-2"></i>
+                            {{ request.user.get_full_name|default:request.user.username }}
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin:login' %}">
+                                <i class="fas fa-sign-in-alt mr-1"></i> Prijava
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% block topbar_extra %}{% endblock %}
+                </ul>
+            </nav>
+            <div class="container-fluid">
+                {% if messages %}
+                    <div class="row">
+                        <div class="col-12">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Zatvori">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+        <footer class="sticky-footer bg-white">
+            <div class="container my-auto">
+                <div class="text-center my-auto text-gray-600">
+                    &copy; {% now "Y" %} Građevinska knjiga
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+<a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+</a>
+<script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/jquery-easing/jquery.easing.min.js' %}"></script>
+<script src="{% static 'js/sb-admin-2.min.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

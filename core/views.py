@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 from django.contrib import messages
+from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
 from django.db import transaction
@@ -264,4 +265,12 @@ class ReviewRejectView(ReviewTokenBaseView):
 
 
 def index(request: HttpRequest) -> HttpResponse:
-    return HttpResponse("Građevinska knjiga — radi")
+    context = {
+        "stats": {
+            "projects": 12,
+            "approved": 32,
+            "pending": 7,
+            "teams": 5,
+        },
+    }
+    return render(request, "core/index.html", context)

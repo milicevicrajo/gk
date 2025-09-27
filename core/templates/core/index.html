@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Dobrodošli · Građevinska knjiga{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        list-style: none;
+        padding-left: 0;
+        position: relative;
+        margin: 0;
+    }
+    .timeline li {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 1.5rem;
+    }
+    .timeline::before {
+        content: "";
+        position: absolute;
+        top: 0.5rem;
+        left: 0.9rem;
+        width: 2px;
+        height: 100%;
+        background: rgba(78, 115, 223, 0.25);
+    }
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+    }
+    .timeline-content {
+        background: #fff;
+        border-radius: 0.35rem;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 0.15rem 1rem rgba(58, 59, 69, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-gradient-primary text-white p-4 shadow-sm rounded">
+            <h1 class="display-6 fw-bold mb-2">Građevinska knjiga</h1>
+            <p class="lead mb-0">Centralizovano praćenje građevinskih radova, obračuna i odobrenja.</p>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Aktivni projekti</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">12</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-city fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Odobrene knjige</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">32</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-double fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Na čekanju</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">7</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Timovi na terenu</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">5</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users-cog fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="card shadow h-100">
+            <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Aktivnosti</h6>
+                <span class="badge bg-secondary">Test podaci</span>
+            </div>
+            <div class="card-body">
+                <ul class="timeline">
+                    <li>
+                        <span class="timeline-icon bg-primary"><i class="fas fa-upload"></i></span>
+                        <div class="timeline-content">
+                            <div class="small text-gray-500">Danas · 10:15</div>
+                            <h6 class="text-gray-800 mb-1">Predaja GK-2025/08</h6>
+                            <p class="mb-0">Izvođač UNIROAD d.o.o. je poslao knjigu na reviziju.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="timeline-icon bg-success"><i class="fas fa-check"></i></span>
+                        <div class="timeline-content">
+                            <div class="small text-gray-500">Juče · 14:03</div>
+                            <h6 class="text-gray-800 mb-1">Odobrena GK-2025/05</h6>
+                            <p class="mb-0">Nadzor je potvrdio knjigu za objekat "Most Savski".</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="timeline-icon bg-warning"><i class="fas fa-exclamation-triangle"></i></span>
+                        <div class="timeline-content">
+                            <div class="small text-gray-500">Juče · 09:20</div>
+                            <h6 class="text-gray-800 mb-1">Komentar na GK-2025/03</h6>
+                            <p class="mb-0">Investitor traži dodatno obrazloženje stavke 3.4.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Brzi pristup</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'core:sheet-list' %}">
+                        Svi listovi
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{% url 'core:sheet-create' %}">
+                        Nova građevinska knjiga
+                        <i class="fas fa-plus text-success"></i>
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="#">
+                        Izveštaji
+                        <span class="badge bg-info text-dark">Soon</span>
+                    </a>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="#">
+                        Pomoć i vodiči
+                        <i class="fas fa-life-ring text-primary"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
