@@ -1,75 +1,90 @@
 ﻿from django import forms
-from django.forms import BaseInlineFormSet, inlineformset_factory
 
-from .models import BoQItem, GKEntry, GKSheet
+from .models import BoQItem, GKSheet, Project
 
 
-class GKSheetForm(forms.ModelForm):
+class BaseBootstrapForm(forms.ModelForm):
+    select_fields = (forms.Select, forms.SelectMultiple)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            widget = field.widget
+            existing = widget.attrs.get('class', '')
+            if isinstance(widget, forms.CheckboxInput):
+                css_class = 'form-check-input'
+            elif isinstance(widget, self.select_fields):
+                css_class = 'form-select'
+            else:
+                css_class = 'form-control'
+            widget.attrs['class'] = f"{existing} {css_class}".strip()
+
+
+class ProjectForm(BaseBootstrapForm):
     class Meta:
-        model = GKSheet
-        fields = ["project", "date", "note", "review_note"]
+        model = Project
+        fields = ['name', 'location', 'description', 'is_active']
         widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-            "note": forms.Textarea(attrs={"rows": 4}),
-            "review_note": forms.Textarea(attrs={"rows": 3}),
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
+
+
+class BoQItemForm(BaseBootstrapForm):
+    class Meta:
+        model = BoQItem
+        fields = ['project', 'code', 'title', 'uom', 'contract_qty', 'unit_price', 'closed_at', 'close_note']
+        widgets = {
+            'close_note': forms.Textarea(attrs={'rows': 3}),
+            'closed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            existing_class = field.widget.attrs.get("class", "")
-            if name == "project":
-                field.widget.attrs["class"] = f"{existing_class} form-select".strip()
-            else:
-                field.widget.attrs["class"] = f"{existing_class} form-control".strip()
-        self.fields["review_note"].widget.attrs.setdefault("readonly", True)
+        numeric_fields = {'contract_qty': '0.001', 'unit_price': '0.01'}
+        for name, step in numeric_fields.items():
+            if name in self.fields:
+                self.fields[name].widget.attrs.setdefault('step', step)
 
 
-class GKEntryForm(forms.ModelForm):
+class GKSheetForm(BaseBootstrapForm):
     class Meta:
-        model = GKEntry
-        fields = ["boq_item", "quantity", "comment"]
+        model = GKSheet
+        fields = [
+            'project',
+            'boq_item',
+            'seq_no',
+            'period_from',
+            'period_to',
+            'qty_this_period',
+            'status',
+            'note',
+        ]
         widgets = {
-            "comment": forms.Textarea(attrs={"rows": 2}),
+            'period_from': forms.DateInput(attrs={'type': 'date'}),
+            'period_to': forms.DateInput(attrs={'type': 'date'}),
+            'note': forms.Textarea(attrs={'rows': 4}),
         }
 
-    def __init__(self, *args, project=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
-        if project is None and getattr(self.instance, "sheet", None):
-            project = getattr(self.instance.sheet, "project", None)
-        self._project = project
-        if project is not None:
-            queryset = BoQItem.objects.filter(project=project)
+        self.fields['qty_this_period'].widget.attrs.setdefault('step', '0.001')
+        if project is None and self.instance and self.instance.pk:
+            project = self.instance.project
+        self._set_boq_queryset(project)
+
+    def _set_boq_queryset(self, project):
+        if 'boq_item' not in self.fields:
+            return
+        if project:
+            self.fields['boq_item'].queryset = BoQItem.objects.filter(project=project).order_by('code')
         else:
-            queryset = BoQItem.objects.all()
-        self.fields["boq_item"].queryset = queryset
-        for name, field in self.fields.items():
-            existing_class = field.widget.attrs.get("class", "")
-            if name == "boq_item":
-                field.widget.attrs["class"] = f"{existing_class} form-select".strip()
-            else:
-                field.widget.attrs["class"] = f"{existing_class} form-control".strip()
+            self.fields['boq_item'].queryset = BoQItem.objects.select_related('project').order_by('project__name', 'code')
 
-    def clean_boq_item(self):
-        boq_item = self.cleaned_data.get("boq_item")
-        if boq_item and self._project and boq_item.project_id != getattr(self._project, "id", None):
-            raise forms.ValidationError("BoQ stavka ne pripada izabranom projektu.")
-        return boq_item
-
-
-class BaseGKEntryInlineFormSet(BaseInlineFormSet):
-    def get_form_kwargs(self, index):
-        kwargs = super().get_form_kwargs(index)
-        kwargs.setdefault("project", getattr(self.instance, "project", None))
-        return kwargs
-
-
-GKEntryFormSet = inlineformset_factory(
-    GKSheet,
-    GKEntry,
-    form=GKEntryForm,
-    formset=BaseGKEntryInlineFormSet,
-    fields=["boq_item", "quantity", "comment"],
-    extra=1,
-    can_delete=True,
-)
+    def clean(self):
+        cleaned = super().clean()
+        project = cleaned.get('project')
+        boq_item = cleaned.get('boq_item')
+        if project and boq_item and boq_item.project_id != project.id:
+            self.add_error('boq_item', 'BoQ stavka mora pripadati izabranom projektu.')
+        return cleaned

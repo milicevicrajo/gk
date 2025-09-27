@@ -1,0 +1,49 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">{{ title }}</h1>
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
+    {% endif %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label class="form-label" for="id_name">Naziv</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+                <div class="invalid-feedback d-block">{{ form.name.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="id_location">Lokacija</label>
+            {{ form.location }}
+            {% if form.location.errors %}
+                <div class="invalid-feedback d-block">{{ form.location.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="id_description">Opis</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="invalid-feedback d-block">{{ form.description.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <div class="form-check">
+                {{ form.is_active }}
+                <label class="form-check-label" for="id_is_active">Aktivan projekat</label>
+            </div>
+            {% if form.is_active.errors %}
+                <div class="invalid-feedback d-block">{{ form.is_active.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Sačuvaj</button>
+        <a class="btn btn-outline-secondary" href="{% url 'core:project-list' %}">Otkaži</a>
+    </div>
+</form>
+{% endblock %}

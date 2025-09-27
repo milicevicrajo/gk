@@ -1,119 +1,144 @@
-﻿from django.core.validators import MinValueValidator
-from django.db import models
+﻿from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-
+from django.conf import settings
+from django.db import models, transaction
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from decimal import Decimal
 
 class Project(models.Model):
     name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
-
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self) -> str:
         return self.name
 
 
 class BoQItem(models.Model):
-    project = models.ForeignKey(
-        Project,
-        related_name="boq_items",
-        on_delete=models.CASCADE,
-    )
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="boq_items")
     code = models.CharField(max_length=50)
-    description = models.CharField(max_length=255)
-    unit_of_measure = models.CharField(max_length=20)
-    contracted_quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    title = models.CharField(max_length=255)
+    uom = models.CharField(max_length=20)
+    contract_qty = models.DecimalField(max_digits=16, decimal_places=3, default=0)
+    unit_price   = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    closed_at = models.DateTimeField(null=True, blank=True)  # zatvaranje pozicije (opciono)
+    close_note = models.TextField(blank=True)
 
     class Meta:
         unique_together = ("project", "code")
-        ordering = ["project", "code"]
+        indexes = [models.Index(fields=["project", "code"])]
 
-    def __str__(self) -> str:
-        return f"{self.project.name} / {self.code}"
-
-
-class GKSheet(models.Model):
-    class Status(models.TextChoices):
-        DRAFT = "draft", "Draft"
-        SUBMITTED = "submitted", "Submitted"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
-
-    project = models.ForeignKey(
-        Project,
-        related_name="sheets",
-        on_delete=models.CASCADE,
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.DRAFT,
-    )
-    date = models.DateField()
-    note = models.TextField(blank=True)
-    review_note = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ["-date", "project"]
-
-    def __str__(self) -> str:
-        return f"{self.project.name} / {self.date:%Y-%m-%d} ({self.get_status_display()})"
-
-    def get_absolute_url(self) -> str:
-        return reverse("core:sheet-detail", args=[self.pk])
+    def __str__(self): return f"{self.code} — {self.title}"
 
     @property
-    def is_draft(self) -> bool:
-        return self.status == self.Status.DRAFT
+    def is_closed(self) -> bool:
+        return self.closed_at is not None
 
-    def has_entries(self) -> bool:
-        return self.entries.exists()
+class GKSheet(models.Model):
+    """
+    Jedan 'list GK' = jedna SITUACIJA za jednu BoQ poziciju.
+    Period je slobodan (od-do). Poravnanje i kumulativ radimo sekvencijski po poziciji.
+    """
+    STATUS = (
+        ("draft", "Draft"),
+        ("submitted", "Submitted"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+        ("locked", "Locked"),  # opcionalno kasnije
+    )
 
+    project  = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="gk_sheets")
+    boq_item = models.ForeignKey(BoQItem, on_delete=models.PROTECT, related_name="gk_sheets")
 
-class GKEntry(models.Model):
-    sheet = models.ForeignKey(
-        GKSheet,
-        related_name="entries",
-        on_delete=models.CASCADE,
-    )
-    boq_item = models.ForeignKey(
-        BoQItem,
-        related_name="entries",
-        on_delete=models.PROTECT,
-    )
-    quantity = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-    )
-    comment = models.TextField(blank=True)
+    # Sekvenca po BoQItem (1, 2, 3, ...) – određuje redosled i na osnovu nje sabiramo kumulativ.
+    seq_no = models.PositiveIntegerField()
+
+    # Period je informativan i slobodan
+    period_from = models.DateField(null=True, blank=True)
+    period_to   = models.DateField(null=True, blank=True)
+
+    # Količina u listu i kumulativ do ovog lista (računa se)
+    qty_this_period = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
+    qty_cumulative  = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
+
+    note = models.TextField(blank=True)
+    status = models.CharField(max_length=12, choices=STATUS, default="draft")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_gk_sheets")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("sheet", "boq_item")
+        unique_together = (
+            ("boq_item", "seq_no"),      # jedna sekvenca po poziciji
+        )
+        indexes = [
+            models.Index(fields=["project", "boq_item", "seq_no"]),
+            models.Index(fields=["status"]),
+        ]
+        ordering = ["boq_item__code", "seq_no"]
 
-    def __str__(self) -> str:
-        return f"{self.sheet} / {self.boq_item.code}"
+    def __str__(self):
+        return f"{self.boq_item.code} / L{self.seq_no:04d}"
 
+    # --- Validacije domena ---
+    def clean(self):
+        if self.project_id != self.boq_item.project_id:
+            raise ValidationError("Project GK lista i BoQ stavke moraju biti isti.")
+        if self.qty_this_period < 0:
+            raise ValidationError("Količina u listu ne može biti negativna.")
+        if self.period_from and self.period_to and self.period_from > self.period_to:
+            raise ValidationError("Period FROM ne može biti posle TO.")
 
-class ReviewToken(models.Model):
-    class TokenType(models.TextChoices):
-        APPROVE = "approve", "Approve"
-        REJECT = "reject", "Reject"
+        if self.boq_item.is_closed and self.status in ("draft", "submitted", "approved"):
+            raise ValidationError("BoQ pozicija je zatvorena — nije dozvoljen novi list.")
 
-    sheet = models.ForeignKey(
-        GKSheet,
-        related_name="review_tokens",
-        on_delete=models.CASCADE,
-    )
-    token = models.CharField(max_length=255, unique=True)
-    token_type = models.CharField(max_length=7, choices=TokenType.choices)
-    expires_at = models.DateTimeField()
-    used = models.BooleanField(default=False)
+    def _prev_approved_sum(self) -> Decimal:
+        """Suma odobrenih količina iz svih PRETHODNIH listova ove pozicije."""
+        agg = GKSheet.objects.filter(
+            boq_item=self.boq_item,
+            status="approved",
+            seq_no__lt=self.seq_no,
+        ).aggregate(total=models.Sum("qty_this_period"))
+        return (agg["total"] or Decimal("0.000")).quantize(Decimal("0.001"))
 
-    class Meta:
-        ordering = ["-expires_at"]
+    def _compute_cumulative(self) -> Decimal:
+        """
+        Kumulativ = suma(approved prethodnih) + (ova količina ako je bar submitted/approved).
+        Ako želiš da kumulativ računa isključivo odobreno, promeni uslov na self.status == "approved".
+        """
+        prev_sum = self._prev_approved_sum()
+        include_self = self.status in ("submitted", "approved")
+        return (prev_sum + (self.qty_this_period if include_self else Decimal("0.000"))).quantize(Decimal("0.001"))
 
-    def __str__(self) -> str:
-        return f"{self.get_token_type_display()} for {self.sheet}"
+    def _bounds_check(self):
+        if self.qty_cumulative < 0:
+            raise ValidationError("Kumulativ ne može biti negativan.")
+        limit = self.boq_item.contract_qty or Decimal("0")
+        if limit and self.qty_cumulative > limit:
+            raise ValidationError(
+                f"Kumulativ {self.qty_cumulative} prelazi ugovorenu količinu {limit} za {self.boq_item.code}."
+            )
 
-    def is_valid(self) -> bool:
-        return not self.used and self.expires_at >= timezone.now()
+    def save(self, *args, **kwargs):
+        # dodeli seq_no ako nije postavljen (next = max+1)
+        if not self.seq_no:
+            last = GKSheet.objects.filter(boq_item=self.boq_item).order_by("-seq_no").first()
+            self.seq_no = (last.seq_no + 1) if last else 1
+
+        self.full_clean()  # osnovne validacije
+        with transaction.atomic():
+            # recompute kumulativ pre snimanja
+            self.qty_cumulative = self._compute_cumulative()
+            self._bounds_check()
+            super().save(*args, **kwargs)
+
+    # Pomoćno zatvaranje pozicije kada kumulativ == ugovorno
+    def try_close_boq_item(self, user=None, note: str = ""):
+        if self.boq_item.contract_qty and self.qty_cumulative >= self.boq_item.contract_qty:
+            self.boq_item.closed_at = timezone.now()
+            if note: self.boq_item.close_note = note
+            self.boq_item.save(update_fields=["closed_at", "close_note"])

@@ -1,25 +1,18 @@
 ﻿from __future__ import annotations
 
-import secrets
-from datetime import timedelta
-from typing import Any
+from typing import Any, Optional
 
-from django.contrib import messages
-from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.mail import send_mail
-from django.db import transaction
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
-from django.shortcuts import redirect
-from django.urls import reverse
-from django.utils import timezone
-from django.views import View
+from django.contrib.auth.views import LoginView
+from django.http import HttpRequest
+from django.shortcuts import render
+from django.urls import reverse, reverse_lazy
 from django.views.generic import DetailView, ListView
-from django.views.generic.edit import CreateView, UpdateView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from .forms import GKEntryFormSet, GKSheetForm
-from .models import GKSheet, Project, ReviewToken
-from .permissions import get_role_emails, user_has_any_role, user_has_role
+from .forms import BoQItemForm, GKSheetForm, ProjectForm
+from .models import BoQItem, GKSheet, Project
+from .permissions import user_has_any_role, user_has_role
 
 
 class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -35,16 +28,159 @@ class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return user_has_any_role(user, self.roles)
 
 
-def can_edit_sheet(user, sheet: GKSheet) -> bool:
-    return sheet.is_draft and (user_has_role(user, "admin") or user_has_role(user, "izvodjac"))
+class AppLoginView(LoginView):
+    template_name = 'core/auth/login.html'
+    redirect_authenticated_user = True
+
+    def get_success_url(self) -> str:
+        redirect_to = self.get_redirect_url()
+        if redirect_to:
+            return redirect_to
+        return str(reverse_lazy('core:sheet-list'))
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        for field_name in ('username', 'password'):
+            if field_name in form.fields:
+                field = form.fields[field_name]
+                existing = field.widget.attrs.get('class', '')
+                field.widget.attrs['class'] = f"{existing} form-control".strip()
+        form.fields['username'].widget.attrs.setdefault('autofocus', True)
+        form.fields['username'].widget.attrs.setdefault('placeholder', 'Korisničko ime')
+        form.fields['password'].widget.attrs.setdefault('placeholder', 'Lozinka')
+        return form
 
 
-def can_review_sheet(user) -> bool:
-    return user_has_role(user, "admin") or user_has_role(user, "nadzor")
+class ProjectListView(RoleRequiredMixin, ListView):
+    model = Project
+    context_object_name = "projects"
+    template_name = "core/project_list.html"
+    roles = ("izvodjac", "nadzor", "investitor")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["can_manage"] = user_has_role(self.request.user, "admin")
+        return context
 
 
-def can_submit_sheet(user, sheet: GKSheet) -> bool:
-    return can_edit_sheet(user, sheet) and sheet.has_entries()
+class ProjectCreateView(RoleRequiredMixin, CreateView):
+    model = Project
+    form_class = ProjectForm
+    template_name = "core/project_form.html"
+    roles = ("admin",)
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:project-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Novi projekat"
+        return context
+
+
+class ProjectUpdateView(RoleRequiredMixin, UpdateView):
+    model = Project
+    form_class = ProjectForm
+    template_name = "core/project_form.html"
+    roles = ("admin",)
+    context_object_name = "project"
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:project-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Izmena projekta"
+        return context
+
+
+class ProjectDeleteView(RoleRequiredMixin, DeleteView):
+    model = Project
+    template_name = "core/project_confirm_delete.html"
+    roles = ("admin",)
+    context_object_name = "project"
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:project-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context.setdefault("title", "Brisanje projekta")
+        return context
+
+
+class BoQItemListView(RoleRequiredMixin, ListView):
+    model = BoQItem
+    context_object_name = "boq_items"
+    template_name = "core/boqitem_list.html"
+    roles = ("izvodjac", "nadzor", "investitor")
+
+    def get_queryset(self):
+        queryset = BoQItem.objects.select_related("project").order_by("project__name", "code")
+        project_id = self.request.GET.get("project")
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        return queryset
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["projects"] = Project.objects.order_by("name")
+        context["selected_project"] = self.request.GET.get("project", "")
+        context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
+        return context
+
+
+class BoQItemCreateView(RoleRequiredMixin, CreateView):
+    model = BoQItem
+    form_class = BoQItemForm
+    template_name = "core/boqitem_form.html"
+    roles = ("admin", "izvodjac")
+
+    def get_initial(self):
+        initial = super().get_initial()
+        project_id = self.request.GET.get("project")
+        if project_id:
+            initial["project"] = project_id
+        return initial
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:boqitem-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Nova BoQ stavka"
+        return context
+
+
+class BoQItemUpdateView(RoleRequiredMixin, UpdateView):
+    model = BoQItem
+    form_class = BoQItemForm
+    template_name = "core/boqitem_form.html"
+    roles = ("admin", "izvodjac")
+    context_object_name = "boq_item"
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:boqitem-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Izmena BoQ stavke"
+        return context
+
+
+class BoQItemDeleteView(RoleRequiredMixin, DeleteView):
+    model = BoQItem
+    template_name = "core/boqitem_confirm_delete.html"
+    roles = ("admin", "izvodjac")
+    context_object_name = "boq_item"
+
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:boqitem-list"))
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context.setdefault("title", "Brisanje BoQ stavke")
+        return context
 
 
 class GKSheetListView(RoleRequiredMixin, ListView):
@@ -54,95 +190,23 @@ class GKSheetListView(RoleRequiredMixin, ListView):
     roles = ("izvodjac", "nadzor", "investitor")
 
     def get_queryset(self):
-        queryset = (
-            GKSheet.objects.select_related("project")
-            .prefetch_related("entries__boq_item")
-            .order_by("-date")
-        )
+        queryset = GKSheet.objects.select_related("project", "boq_item").order_by("boq_item__code", "seq_no")
         project_id = self.request.GET.get("project")
+        boq_id = self.request.GET.get("boq")
         if project_id:
             queryset = queryset.filter(project_id=project_id)
+        if boq_id:
+            queryset = queryset.filter(boq_item_id=boq_id)
         return queryset
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        sheets = list(context.get("sheets", []))
-        context["sheets"] = sheets
         context["projects"] = Project.objects.order_by("name")
+        context["boq_items"] = BoQItem.objects.select_related("project").order_by("project__name", "code")
         context["selected_project"] = self.request.GET.get("project", "")
-        context["can_create"] = user_has_role(self.request.user, "izvodjac") or user_has_role(self.request.user, "admin")
-        context["editable_ids"] = {sheet.pk for sheet in sheets if can_edit_sheet(self.request.user, sheet)}
-        context["submittable_ids"] = {sheet.pk for sheet in sheets if can_submit_sheet(self.request.user, sheet)}
+        context["selected_boq"] = self.request.GET.get("boq", "")
+        context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
         return context
-
-
-class SheetFormsetMixin:
-    form_class = GKSheetForm
-    formset_class = GKEntryFormSet
-
-    def get_success_url(self) -> str:
-        return self.object.get_absolute_url()
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        if can_review_sheet(self.request.user):
-            form.fields["review_note"].widget.attrs.pop("readonly", None)
-        else:
-            form.fields["review_note"].disabled = True
-        return form
-
-    def get_formset(self, *, instance: GKSheet, data=None):
-        return self.formset_class(data, instance=instance)
-
-    def forms_invalid(self, form, formset):
-        context = self.get_context_data(form=form, formset=formset)
-        return self.render_to_response(context)
-
-    def _formset_has_entries(self, formset) -> bool:
-        return any(
-            form.cleaned_data and not form.cleaned_data.get("DELETE", False)
-            for form in formset.forms
-        )
-
-
-class GKSheetCreateView(RoleRequiredMixin, SheetFormsetMixin, CreateView):
-    template_name = "core/sheet_form.html"
-    roles = ("izvodjac",)
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        if "formset" not in context:
-            context["formset"] = self.formset_class(instance=GKSheet())
-        context.setdefault("sheet", None)
-        context["title"] = "Nova građevinska knjiga"
-        return context
-
-    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        self.object = None
-        form = self.get_form()
-        if form.is_valid():
-            provisional_sheet: GKSheet = form.save(commit=False)
-            formset = self.get_formset(instance=provisional_sheet, data=request.POST)
-            if formset.is_valid() and self._formset_has_entries(formset):
-                with transaction.atomic():
-                    provisional_sheet.status = GKSheet.Status.DRAFT
-                    provisional_sheet.save()
-                    self.object = provisional_sheet
-                    formset.instance = self.object
-                    formset.save()
-                messages.success(request, "Građevinska knjiga je sačuvana.")
-                return redirect(self.get_success_url())
-            if not formset.is_valid():
-                return self.forms_invalid(form, formset)
-            formset._non_form_errors = formset.error_class(["Dodajte bar jednu stavku u knjigu."])
-            return self.forms_invalid(form, formset)
-        project = None
-        project_id = form.data.get("project")
-        if project_id:
-            project = Project.objects.filter(pk=project_id).first()
-        temp_sheet = GKSheet(project=project)
-        formset = self.get_formset(instance=temp_sheet, data=request.POST)
-        return self.forms_invalid(form, formset)
 
 
 class GKSheetDetailView(RoleRequiredMixin, DetailView):
@@ -153,124 +217,87 @@ class GKSheetDetailView(RoleRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        sheet: GKSheet = context["sheet"]
-        context["entries"] = sheet.entries.select_related("boq_item").all()
-        context["can_edit"] = can_edit_sheet(self.request.user, sheet)
-        context["can_submit"] = can_submit_sheet(self.request.user, sheet)
-        context["can_review"] = can_review_sheet(self.request.user)
+        context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
         return context
 
 
-class GKSheetUpdateView(RoleRequiredMixin, SheetFormsetMixin, UpdateView):
+class GKSheetCreateView(RoleRequiredMixin, CreateView):
     model = GKSheet
+    form_class = GKSheetForm
     template_name = "core/sheet_form.html"
-    context_object_name = "sheet"
-    roles = ("izvodjac",)
+    roles = ("admin", "izvodjac")
 
-    def dispatch(self, request: HttpRequest, *args, **kwargs):
-        self.object = self.get_object()
-        if not can_edit_sheet(request.user, self.object):
-            return HttpResponseForbidden("Izmena nije dozvoljena.")
-        return super().dispatch(request, *args, **kwargs)
+    def get_initial(self):
+        initial = super().get_initial()
+        if project_id := self.request.GET.get("project"):
+            initial["project"] = project_id
+        if boq_id := self.request.GET.get("boq"):
+            initial["boq_item"] = boq_id
+        initial.setdefault("status", "draft")
+        return initial
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        project = self._get_project_from_request()
+        if project:
+            kwargs["project"] = project
+        return kwargs
+
+    def form_valid(self, form: GKSheetForm):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self) -> str:
+        return reverse("core:sheet-detail", args=[self.object.pk])
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        if "formset" not in context:
-            context["formset"] = self.formset_class(instance=self.object)
-        context["title"] = "Izmena građevinske knjige"
+        context["title"] = "Novi list GK"
         return context
 
-    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        form = self.get_form()
-        formset = self.get_formset(instance=self.object, data=request.POST)
-        if form.is_valid() and formset.is_valid() and self._formset_has_entries(formset):
-            with transaction.atomic():
-                self.object = form.save()
-                formset.instance = self.object
-                formset.save()
-            messages.success(request, "Građevinska knjiga je izmenjena.")
-            return redirect(self.get_success_url())
-        if formset.is_valid() and not self._formset_has_entries(formset):
-            formset._non_form_errors = formset.error_class(["Dodajte bar jednu stavku u knjigu."])
-        return self.forms_invalid(form, formset)
+    def _get_project_from_request(self) -> Optional[Project]:
+        project_id = self.request.POST.get("project") or self.request.GET.get("project")
+        if project_id:
+            return Project.objects.filter(pk=project_id).first()
+        return None
 
 
-class GKSheetSubmitView(RoleRequiredMixin, View):
+class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
     model = GKSheet
-    roles = ("izvodjac",)
+    form_class = GKSheetForm
+    template_name = "core/sheet_form.html"
+    context_object_name = "sheet"
+    roles = ("admin", "izvodjac")
 
-    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
-        sheet = GKSheet.objects.select_related("project").prefetch_related("entries__boq_item").get(pk=pk)
-        if not can_submit_sheet(request.user, sheet):
-            return HttpResponseForbidden("Nema dovoljno prava za slanje ili knjiga nema stavke.")
-        with transaction.atomic():
-            sheet.review_tokens.update(used=True)
-            sheet.status = GKSheet.Status.SUBMITTED
-            sheet.save(update_fields=["status"])
-            tokens = self._create_tokens(sheet)
-        self._send_submit_email(request, sheet, tokens)
-        messages.success(request, "Knjiga je poslata na reviziju.")
-        return redirect(sheet.get_absolute_url())
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs["project"] = self.get_object().project
+        return kwargs
 
-    def _create_tokens(self, sheet: GKSheet) -> dict[str, ReviewToken]:
-        expires_at = timezone.now() + timedelta(days=7)
-        tokens = {}
-        for token_type in (ReviewToken.TokenType.APPROVE, ReviewToken.TokenType.REJECT):
-            token_value = secrets.token_urlsafe(32)
-            tokens[token_type] = ReviewToken.objects.create(
-                sheet=sheet,
-                token=token_value,
-                token_type=token_type,
-                expires_at=expires_at,
-            )
-        return tokens
+    def get_success_url(self) -> str:
+        return reverse("core:sheet-detail", args=[self.object.pk])
 
-    def _send_submit_email(self, request: HttpRequest, sheet: GKSheet, tokens: dict[str, ReviewToken]) -> None:
-        recipients = get_role_emails("nadzor")
-        if not recipients:
-            return
-        approve_url = request.build_absolute_uri(reverse("core:review-approve", args=[tokens[ReviewToken.TokenType.APPROVE].token]))
-        reject_url = request.build_absolute_uri(reverse("core:review-reject", args=[tokens[ReviewToken.TokenType.REJECT].token]))
-        subject = f"GK sheet #{sheet.pk} – zahtev za pregled"
-        message = (
-            f"Knjiga: {sheet}\n"
-            f"Projekat: {sheet.project.name}\n"
-            f"Datum: {sheet.date:%Y-%m-%d}\n\n"
-            f"Pregledajte knjigu i izaberite akciju:\n"
-            f"Odobri: {approve_url}\n"
-            f"Odbij: {reject_url}\n"
-        )
-        send_mail(subject, message, None, recipients)
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Izmena lista GK"
+        return context
 
 
-class ReviewTokenBaseView(View):
-    token_type: ReviewToken.TokenType
+class GKSheetDeleteView(RoleRequiredMixin, DeleteView):
+    model = GKSheet
+    template_name = "core/sheet_confirm_delete.html"
+    context_object_name = "sheet"
+    roles = ("admin", "izvodjac")
 
-    def get(self, request: HttpRequest, token: str) -> HttpResponse:
-        review_token = ReviewToken.objects.filter(token=token, token_type=self.token_type).select_related("sheet").first()
-        if not review_token:
-            return HttpResponse("Token nije pronađen.", status=404)
-        if not review_token.is_valid():
-            return HttpResponse("Token je iskorišćen ili istekao.")
-        action = "odobravanje" if self.token_type == ReviewToken.TokenType.APPROVE else "odbijanje"
-        return HttpResponse(f"Stub za {action}.")
+    def get_success_url(self) -> str:
+        return str(reverse_lazy("core:sheet-list"))
 
 
-class ReviewApproveView(ReviewTokenBaseView):
-    token_type = ReviewToken.TokenType.APPROVE
-
-
-class ReviewRejectView(ReviewTokenBaseView):
-    token_type = ReviewToken.TokenType.REJECT
-
-
-def index(request: HttpRequest) -> HttpResponse:
-    context = {
-        "stats": {
-            "projects": 12,
-            "approved": 32,
-            "pending": 7,
-            "teams": 5,
-        },
+def index(request: HttpRequest):
+    stats = {
+        "projects": Project.objects.count(),
+        "boq_items": BoQItem.objects.count(),
+        "sheets": GKSheet.objects.count(),
+        "active_projects": Project.objects.filter(is_active=True).count(),
     }
-    return render(request, "core/index.html", context)
+    return render(request, "core/index.html", {"stats": stats})

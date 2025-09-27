@@ -1,40 +1,40 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
-{% block title %}GK detalj · {{ sheet.project.name }}{% endblock %}
+{% block title %}GK list {{ sheet.boq_item.code }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-1">Građevinska knjiga #{{ sheet.pk }}</h1>
-        <p class="text-body-secondary mb-0">{{ sheet.project.name }} · {{ sheet.date|date:"d.m.Y" }}</p>
+        <h1 class="h3 mb-1">GK list #{{ sheet.pk }}</h1>
+        <p class="text-body-secondary mb-0">{{ sheet.project.name }} � {{ sheet.boq_item.code }} / {{ sheet.boq_item.title }}</p>
     </div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Nazad</a>
-        {% if can_edit %}
+        {% if can_manage %}
             <a class="btn btn-primary" href="{% url 'core:sheet-update' sheet.pk %}">Izmeni</a>
-        {% endif %}
-        {% if can_submit %}
-            <form method="post" action="{% url 'core:sheet-submit' sheet.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-success">Pošalji na reviziju</button>
-            </form>
+            <a class="btn btn-danger" href="{% url 'core:sheet-delete' sheet.pk %}">Obri�i</a>
         {% endif %}
     </div>
 </div>
-<div class="row mb-4">
+<div class="row g-4 mb-4">
     <div class="col-md-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Detalji</h2>
+                <h2 class="h6 text-uppercase text-body-secondary">Osnovni podaci</h2>
                 <dl class="row mb-0">
+                    <dt class="col-sm-4">Projekat</dt>
+                    <dd class="col-sm-8">{{ sheet.project.name }}</dd>
+                    <dt class="col-sm-4">BoQ</dt>
+                    <dd class="col-sm-8">{{ sheet.boq_item.code }} - {{ sheet.boq_item.title }}</dd>
+                    <dt class="col-sm-4">Sekvenca</dt>
+                    <dd class="col-sm-8">{{ sheet.seq_no }}</dd>
                     <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge text-bg-secondary text-uppercase">{{ sheet.get_status_display }}</span></dd>
-                    <dt class="col-sm-4">Datum</dt>
-                    <dd class="col-sm-8">{{ sheet.date|date:"Y-m-d" }}</dd>
-                    <dt class="col-sm-4">Napomena</dt>
-                    <dd class="col-sm-8">{{ sheet.note|default:"—" }}</dd>
-                    <dt class="col-sm-4">Komentar nadzora</dt>
-                    <dd class="col-sm-8">{{ sheet.review_note|default:"—" }}</dd>
+                    <dd class="col-sm-8"><span class="badge badge-secondary text-uppercase">{{ sheet.get_status_display }}</span></dd>
+                    <dt class="col-sm-4">Period</dt>
+                    <dd class="col-sm-8">
+                        {% if sheet.period_from %}{{ sheet.period_from|date:"d.m.Y" }}{% endif %}
+                        {% if sheet.period_to %}- {{ sheet.period_to|date:"d.m.Y" }}{% endif %}
+                    </dd>
                 </dl>
             </div>
         </div>
@@ -42,49 +42,33 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Informacije</h2>
-                <p class="mb-0">Ukupno stavki: {{ entries|length }}</p>
-                {% if sheet.status == sheet.Status.SUBMITTED %}
-                    <p class="mb-0 text-body-secondary">Knjiga čeka reviziju.</p>
-                {% elif sheet.status == sheet.Status.APPROVED %}
-                    <p class="mb-0 text-success">Knjiga je odobrena.</p>
-                {% elif sheet.status == sheet.Status.REJECTED %}
-                    <p class="mb-0 text-danger">Knjiga je odbijena.</p>
-                {% endif %}
-                {% if can_review %}
-                    <p class="mt-3 mb-0 text-body-secondary">Pregled nadzornih tokena je u pripremi.</p>
+                <h2 class="h6 text-uppercase text-body-secondary">Kolicine</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Kolicina (period)</dt>
+                    <dd class="col-sm-6">{{ sheet.qty_this_period }}</dd>
+                    <dt class="col-sm-6">Kumulativ</dt>
+                    <dd class="col-sm-6">{{ sheet.qty_cumulative }}</dd>
+                </dl>
+                {% if sheet.note %}
+                    <hr>
+                    <h3 class="h6 text-uppercase text-body-secondary">Napomena</h3>
+                    <p class="mb-0">{{ sheet.note }}</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
-<h2 class="h5">Stavke</h2>
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th scope="col">Šifra</th>
-                <th scope="col">Opis</th>
-                <th scope="col">Jedinica</th>
-                <th scope="col">Količina</th>
-                <th scope="col">Komentar</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in entries %}
-                <tr>
-                    <td>{{ entry.boq_item.code }}</td>
-                    <td>{{ entry.boq_item.description }}</td>
-                    <td>{{ entry.boq_item.unit_of_measure }}</td>
-                    <td>{{ entry.quantity }}</td>
-                    <td>{{ entry.comment|default:"—" }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center text-body-secondary">Nema unetih stavki.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-body-secondary">Meta podaci</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Kreirao</dt>
+            <dd class="col-sm-8">{{ sheet.created_by.get_full_name|default:sheet.created_by.username }}</dd>
+            <dt class="col-sm-4">Kreirano</dt>
+            <dd class="col-sm-8">{{ sheet.created_at }}</dd>
+            <dt class="col-sm-4">A�urirano</dt>
+            <dd class="col-sm-8">{{ sheet.updated_at }}</dd>
+        </dl>
+    </div>
 </div>
 {% endblock %}

@@ -22,7 +22,19 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:sheet-list' %}">
                 <i class="fas fa-clipboard-list"></i>
-                <span>Građevinske knjige</span>
+                <span>Građevinski listovi</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:project-list' %}">
+                <i class="fas fa-project-diagram"></i>
+                <span>Projekti</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:boqitem-list' %}">
+                <i class="fas fa-list-ul"></i>
+                <span>BoQ stavke</span>
             </a>
         </li>
         {% block sidebar_extra %}{% endblock %}
@@ -39,13 +51,21 @@
                 </button>
                 <ul class="navbar-nav ml-auto">
                     {% if request.user.is_authenticated %}
-                        <li class="nav-item d-flex align-items-center text-gray-600 small">
+                        <li class="nav-item d-flex align-items-center text-gray-600 small mr-3">
                             <i class="fas fa-user-circle fa-lg mr-2"></i>
                             {{ request.user.get_full_name|default:request.user.username }}
                         </li>
+                        <li class="nav-item">
+                            <form method="post" action="{% url 'core:logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link p-0 text-gray-600">
+                                    <i class="fas fa-sign-out-alt mr-1"></i> Odjava
+                                </button>
+                            </form>
+                        </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin:login' %}">
+                            <a class="nav-link" href="{% url 'core:login' %}">
                                 <i class="fas fa-sign-in-alt mr-1"></i> Prijava
                             </a>
                         </li>

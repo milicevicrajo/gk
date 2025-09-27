@@ -1,0 +1,15 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Brisanje GK lista{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-4">Brisanje GK lista</h1>
+<p>Da li ste sigurni da želite da obrišete list <strong>{{ sheet.boq_item.code }} / L{{ sheet.seq_no }}</strong>?</p>
+<form method="post">
+    {% csrf_token %}
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">Obriši</button>
+        <a class="btn btn-outline-secondary" href="{% url 'core:sheet-detail' sheet.pk %}">Otkaži</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,53 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Projekti{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Projekti</h1>
+    {% if can_manage %}
+        <a class="btn btn-primary" href="{% url 'core:project-create' %}">Novi projekat</a>
+    {% endif %}
+</div>
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Naziv</th>
+                <th scope="col">Lokacija</th>
+                <th scope="col">Opis</th>
+                <th scope="col">Status</th>
+                {% if can_manage %}
+                    <th scope="col" class="text-end">Akcije</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+                <tr>
+                    <td class="fw-semibold">{{ project.name }}</td>
+                    <td>{{ project.location|default:"-" }}</td>
+                    <td>{{ project.description|default:"-" }}</td>
+                    <td>
+                        {% if project.is_active %}
+                            <span class="badge badge-success">Aktivan</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Arhiviran</span>
+                        {% endif %}
+                    </td>
+                    {% if can_manage %}
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:project-update' project.pk %}">Izmeni</a>
+                            <a class="btn btn-sm btn-outline-danger" href="{% url 'core:project-delete' project.pk %}">Obriši</a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{% if can_manage %}5{% else %}4{% endif %}" class="text-center text-body-secondary">Nema sačuvanih projekata.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

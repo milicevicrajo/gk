@@ -1,0 +1,70 @@
+﻿{% extends "base.html" %}
+
+{% block title %}BoQ stavke{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">BoQ stavke</h1>
+    {% if can_manage %}
+        <a class="btn btn-primary" href="{% url 'core:boqitem-create' %}">Nova stavka</a>
+    {% endif %}
+</div>
+<form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="project-filter">Projekat</label>
+        <select id="project-filter" name="project" class="form-select">
+            <option value="">Svi projekti</option>
+            {% for project in projects %}
+                <option value="{{ project.pk }}" {% if selected_project|stringformat:'s' == project.pk|stringformat:'s' %}selected{% endif %}>{{ project.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filtriraj</button>
+    </div>
+    {% if selected_project %}
+        <div class="col-auto">
+            <a class="btn btn-outline-secondary" href="{% url 'core:boqitem-list' %}">Reset</a>
+        </div>
+    {% endif %}
+</form>
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Projekat</th>
+                <th scope="col">Šifra</th>
+                <th scope="col">Naziv</th>
+                <th scope="col">JM</th>
+                <th scope="col" class="text-end">Ugovorena količina</th>
+                <th scope="col" class="text-end">Jedinična cena</th>
+                {% if can_manage %}
+                    <th scope="col" class="text-end">Akcije</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in boq_items %}
+                <tr>
+                    <td>{{ item.project.name }}</td>
+                    <td>{{ item.code }}</td>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.uom }}</td>
+                    <td class="text-end">{{ item.contract_qty }}</td>
+                    <td class="text-end">{{ item.unit_price }}</td>
+                    {% if can_manage %}
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:boqitem-update' item.pk %}">Izmeni</a>
+                            <a class="btn btn-sm btn-outline-danger" href="{% url 'core:boqitem-delete' item.pk %}">Obriši</a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{% if can_manage %}7{% else %}6{% endif %}" class="text-center text-body-secondary">Nema unetih stavki.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

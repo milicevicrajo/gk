@@ -1,38 +1,39 @@
-from django.contrib import admin
+﻿from django.contrib import admin
 
-from . import models
+from .models import BoQItem, GKSheet, Project
 
 
-@admin.register(models.Project)
+@admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ("name",)
-    search_fields = ("name",)
+    list_display = ("name", "location", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "location")
+    ordering = ("name",)
 
 
-@admin.register(models.BoQItem)
+@admin.register(BoQItem)
 class BoQItemAdmin(admin.ModelAdmin):
-    list_display = ("code", "project", "unit_of_measure", "contracted_quantity")
-    list_filter = ("project",)
-    search_fields = ("code", "description")
+    list_display = ("code", "project", "uom", "contract_qty", "unit_price", "is_closed")
+    list_filter = ("project", "closed_at")
+    search_fields = ("code", "title", "project__name")
+    ordering = ("project__name", "code")
+    readonly_fields = ("closed_at",)
 
 
-@admin.register(models.GKSheet)
+@admin.register(GKSheet)
 class GKSheetAdmin(admin.ModelAdmin):
-    list_display = ("project", "date", "status")
-    list_filter = ("status", "project")
-    search_fields = ("project__name", "note", "review_note")
-    date_hierarchy = "date"
+    list_display = ("project", "boq_item", "seq_no", "status", "qty_this_period", "qty_cumulative", "created_by", "created_at")
+    list_filter = ("status", "project", "boq_item")
+    search_fields = ("boq_item__code", "boq_item__title", "project__name")
+    ordering = ("boq_item__code", "seq_no")
+    readonly_fields = ("qty_cumulative", "created_by", "created_at", "updated_at")
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj is None:
+            return tuple(field for field in self.readonly_fields if field != "created_by")
+        return self.readonly_fields
 
-@admin.register(models.GKEntry)
-class GKEntryAdmin(admin.ModelAdmin):
-    list_display = ("sheet", "boq_item", "quantity")
-    list_filter = ("sheet__project",)
-    search_fields = ("sheet__project__name", "boq_item__code")
-
-
-@admin.register(models.ReviewToken)
-class ReviewTokenAdmin(admin.ModelAdmin):
-    list_display = ("sheet", "token_type", "expires_at", "used")
-    list_filter = ("token_type", "used")
-    search_fields = ("token", "sheet__project__name")
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.created_by_id:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
