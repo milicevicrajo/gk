@@ -17,25 +17,63 @@ class Project(models.Model):
         return self.name
 
 
+class BoQCategory(models.Model):
+    project = models.ForeignKey(
+        Project,
+        related_name="boq_categories",
+        on_delete=models.CASCADE,
+    )
+    sequence = models.PositiveIntegerField()
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ("sequence", "name")
+        unique_together = ("project", "sequence")
+
+    def __str__(self) -> str:
+        return f"{self.project.name} – {self.sequence:02d}. {self.name}"
+
+
 class BoQItem(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="boq_items")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='boq_items')
+    category = models.ForeignKey(
+        'BoQCategory',
+        related_name='items',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     code = models.CharField(max_length=50)
     title = models.CharField(max_length=255)
     uom = models.CharField(max_length=20)
     contract_qty = models.DecimalField(max_digits=16, decimal_places=3, default=0)
-    unit_price   = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    unit_price = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     closed_at = models.DateTimeField(null=True, blank=True)  # zatvaranje pozicije (opciono)
     close_note = models.TextField(blank=True)
 
     class Meta:
-        unique_together = ("project", "code")
-        indexes = [models.Index(fields=["project", "code"])]
+        unique_together = ('project', 'code')
+        indexes = [
+            models.Index(fields=['project', 'code']),
+            models.Index(fields=['project', 'category', 'code']),
+        ]
 
-    def __str__(self): return f"{self.code} — {self.title}"
+    def __str__(self) -> str:
+        category_part = f"[{self.category.name}] " if self.category else ''
+        return f"{category_part}{self.code} - {self.title}"
+
+    def clean(self):
+        if self.category and self.category.project_id != self.project_id:
+            raise ValidationError('Kategorija mora pripadati istom projektu.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     @property
     def is_closed(self) -> bool:
         return self.closed_at is not None
+
 
 class GKSheet(models.Model):
     """

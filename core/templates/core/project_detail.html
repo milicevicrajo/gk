@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Projekat {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">{{ project.name }}</h1>
+        <p class="text-body-secondary mb-0">Lokacija: {{ project.location|default:"Nije definisana" }}</p>
+    </div>
+    {% if can_manage %}
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="{% url 'core:project-update' project.pk %}">Izmeni</a>
+            <a class="btn btn-outline-primary" href="{% url 'core:boqcategory-create' project.pk %}">Nova kategorija</a>
+            <a class="btn btn-primary" href="{% url 'core:boqitem-create' %}?project={{ project.pk }}">Nova BoQ stavka</a>
+        </div>
+    {% endif %}
+</div>
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-body-secondary">Informacije</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Status</dt>
+                    <dd class="col-sm-7">{% if project.is_active %}<span class="badge badge-success">Aktivan</span>{% else %}<span class="badge badge-secondary">Arhiviran</span>{% endif %}</dd>
+                    <dt class="col-sm-5">Ukupno stavki</dt>
+                    <dd class="col-sm-7">{{ total_items }}</dd>
+                    <dt class="col-sm-5">Kategorije</dt>
+                    <dd class="col-sm-7">{{ categories|length }}</dd>
+                    <dt class="col-sm-5">Opis</dt>
+                    <dd class="col-sm-7">{{ project.description|default:"Nema opisa" }}</dd>
+                    <dt class="col-sm-5">Kreirano</dt>
+                    <dd class="col-sm-7">{{ project.created_at|date:"d.m.Y" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-body-secondary">Napomene</h2>
+                <p class="mb-0 text-body-secondary">Dodelite kategorije BoQ stavkama kako bi tabovi ispod prikazali jasnu strukturu po vrstama radova. Stavke bez kategorije nalaze se u posebnom tabu.</p>
+            </div>
+        </div>
+    </div>
+</div>
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" data-toggle="tab" href="#tab-overview" role="tab" aria-selected="true">Sve stavke</a>
+    </li>
+    {% for category in categories %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" data-toggle="tab" href="#tab-category-{{ category.pk }}" role="tab">{{ category.sequence }}. {{ category.name }}</a>
+        </li>
+    {% endfor %}
+    {% if uncategorised_items %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" data-toggle="tab" href="#tab-uncategorised" role="tab">Nekategorizovano</a>
+        </li>
+    {% endif %}
+</ul>
+<div class="tab-content pt-3">
+    <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+        {% include "core/partials/_boq_table.html" with items=all_items show_category=True %}
+    </div>
+    {% for category in categories %}
+        <div class="tab-pane fade" id="tab-category-{{ category.pk }}" role="tabpanel">
+            {% include "core/partials/_boq_table.html" with items=category.items.all show_category=False %}
+        </div>
+    {% endfor %}
+    {% if uncategorised_items %}
+        <div class="tab-pane fade" id="tab-uncategorised" role="tabpanel">
+            {% include "core/partials/_boq_table.html" with items=uncategorised_items show_category=False empty_message="Nema nekategorizovanih stavki." %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+﻿.sheet-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 2rem;
+    padding: 18mm 15mm;
+    background: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.12);
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1a1a1a;
+}
+
+.sheet-page h1,
+.sheet-page h2,
+.sheet-page h3,
+.sheet-page h4,
+.sheet-page h5 {
+    font-weight: 600;
+    margin: 0;
+}
+
+.sheet-header {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-row-gap: 6px;
+    grid-column-gap: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.sheet-header .label {
+    font-weight: 700;
+    color: #555;
+    margin-right: 4px;
+}
+
+.sheet-title {
+    text-align: center;
+    margin: 12px 0;
+}
+
+.sheet-title h1 {
+    font-size: 20px;
+    color: #c62828;
+    letter-spacing: 0.5px;
+}
+
+.sheet-meta-table {
+    width: 100%;
+    border: 1px solid #c62828;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 12px;
+}
+
+.sheet-meta-table th,
+.sheet-meta-table td {
+    border: 1px solid #c62828;
+    padding: 6px 8px;
+    vertical-align: middle;
+}
+
+.sheet-meta-table thead th {
+    background: rgba(198, 40, 40, 0.08);
+    font-weight: 700;
+    text-align: center;
+}
+
+.sheet-body {
+    border: 1px solid #262626;
+    min-height: 120mm;
+    padding: 10px 12px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sheet-body .section-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.sheet-body .note {
+    white-space: pre-line;
+    line-height: 1.45;
+}
+
+.sheet-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.sheet-summary-table th,
+.sheet-summary-table td {
+    border: 1px solid #262626;
+    padding: 6px 8px;
+    text-align: right;
+}
+
+.sheet-summary-table th {
+    background: rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.sheet-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    font-size: 12px;
+}
+
+.sheet-footer .signature {
+    flex: 1;
+    text-align: center;
+}
+
+.sheet-footer .signature .line {
+    margin-top: 32px;
+    border-bottom: 1px solid #262626;
+}
+
+.form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+}
+
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .sheet-page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+    }
+
+    .form-actions,
+    .btn,
+    .alert {
+        display: none !important;
+    }
+}

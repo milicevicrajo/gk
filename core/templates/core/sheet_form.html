@@ -1,6 +1,11 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sheet.css' %}">
+{% endblock %}
 
 {% block content %}
 <h1 class="h3 mb-4">{{ title }}</h1>
@@ -9,65 +14,125 @@
     {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
     {% endif %}
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <label class="form-label" for="id_project">Projekat</label>
-            {{ form.project }}
-            {% if form.project.errors %}
-                <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
-            {% endif %}
+    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+    <div class="sheet-page">
+        <div class="sheet-header">
+            <div>
+                <span class="label">Gradilište:</span>
+                {{ form.project }}
+                {% if form.project.errors %}
+                    <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="label">BoQ stavka:</span>
+                {{ form.boq_item }}
+                {% if form.boq_item.errors %}
+                    <div class="invalid-feedback d-block">{{ form.boq_item.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="label">Sekvenca:</span>
+                {{ form.seq_no }}
+                {% if form.seq_no.errors %}
+                    <div class="invalid-feedback d-block">{{ form.seq_no.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="label">Status:</span>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div class="invalid-feedback d-block">{{ form.status.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="label">Period od:</span>
+                {{ form.period_from }}
+                {% if form.period_from.errors %}
+                    <div class="invalid-feedback d-block">{{ form.period_from.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="label">Period do:</span>
+                {{ form.period_to }}
+                {% if form.period_to.errors %}
+                    <div class="invalid-feedback d-block">{{ form.period_to.errors|join:', ' }}</div>
+                {% endif %}
+            </div>
         </div>
-        <div class="col-md-4">
-            <label class="form-label" for="id_boq_item">BoQ stavka</label>
-            {{ form.boq_item }}
-            {% if form.boq_item.errors %}
-                <div class="invalid-feedback d-block">{{ form.boq_item.errors|join:', ' }}</div>
-            {% endif %}
+
+        <div class="sheet-title">
+            <h1>Obračunski list građevinske knjige</h1>
+            <div class="text-muted">
+                {% if sheet %}List broj {{ sheet.seq_no }}{% else %}Novi list{% endif %}
+            </div>
         </div>
-        <div class="col-md-2">
-            <label class="form-label" for="id_seq_no">Sekvenca</label>
-            {{ form.seq_no }}
-            {% if form.seq_no.errors %}
-                <div class="invalid-feedback d-block">{{ form.seq_no.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-2">
-            <label class="form-label" for="id_status">Status</label>
-            {{ form.status }}
-            {% if form.status.errors %}
-                <div class="invalid-feedback d-block">{{ form.status.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_period_from">Period od</label>
-            {{ form.period_from }}
-            {% if form.period_from.errors %}
-                <div class="invalid-feedback d-block">{{ form.period_from.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_period_to">Period do</label>
-            {{ form.period_to }}
-            {% if form.period_to.errors %}
-                <div class="invalid-feedback d-block">{{ form.period_to.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_qty_this_period">Količina (period)</label>
-            {{ form.qty_this_period }}
-            {% if form.qty_this_period.errors %}
-                <div class="invalid-feedback d-block">{{ form.qty_this_period.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-12">
-            <label class="form-label" for="id_note">Napomena</label>
+
+        <table class="sheet-meta-table">
+            <thead>
+                <tr>
+                    <th>Jedin. cena</th>
+                    <th>Po</th>
+                    <th>Količina ugovorno</th>
+                    <th>Količina ovaj list</th>
+                    <th>Kumulativ</th>
+                    <th>Preostalo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{% if sheet %}{{ sheet.boq_item.unit_price }}{% else %}-{% endif %}</td>
+                    <td>{% if sheet %}{{ sheet.boq_item.uom }}{% else %}-{% endif %}</td>
+                    <td>{% if sheet %}{{ sheet.boq_item.contract_qty }}{% else %}-{% endif %}</td>
+                    <td>
+                        {{ form.qty_this_period }}
+                        {% if form.qty_this_period.errors %}
+                            <div class="invalid-feedback d-block">{{ form.qty_this_period.errors|join:', ' }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{% if sheet %}{{ sheet.qty_cumulative }}{% else %}-{% endif %}</td>
+                    <td>{% if remaining_qty is not None %}{{ remaining_qty }}{% else %}-{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="sheet-body">
+            <div class="section-title">Opis radova</div>
             {{ form.note }}
             {% if form.note.errors %}
                 <div class="invalid-feedback d-block">{{ form.note.errors|join:', ' }}</div>
             {% endif %}
+
+            <table class="sheet-summary-table">
+                <thead>
+                    <tr>
+                        <th>Datum kreiranja</th>
+                        <th>Datum ažuriranja</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{% if sheet %}{{ sheet.created_at|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+                        <td>{% if sheet %}{{ sheet.updated_at|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="sheet-footer">
+                <div class="signature">
+                    <div class="label">Odgovorni izvođač</div>
+                    <div class="line"></div>
+                </div>
+                <div class="signature">
+                    <div class="label">Nadzorni organ</div>
+                    <div class="line"></div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="d-flex gap-2">
+
+    <div class="form-actions">
         <button type="submit" class="btn btn-primary">Sačuvaj</button>
         <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Otkaži</a>
     </div>

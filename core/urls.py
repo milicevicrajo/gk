@@ -7,6 +7,8 @@ app_name = "core"
 
 urlpatterns = [
     path('projects/', views.ProjectListView.as_view(), name='project-list'),
+    path('projects/<int:pk>/', views.ProjectDetailView.as_view(), name='project-detail'),
+    path('projects/<int:project_pk>/categories/create/', views.BoQCategoryCreateView.as_view(), name='boqcategory-create'),
     path('projects/create/', views.ProjectCreateView.as_view(), name='project-create'),
     path('projects/<int:pk>/edit/', views.ProjectUpdateView.as_view(), name='project-update'),
     path('projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project-delete'),

@@ -1,0 +1,34 @@
+{% with message=empty_message|default:"Nema stavki." %}
+{% if items %}
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Šifra</th>
+                {% if show_category %}<th scope="col">Kategorija</th>{% endif %}
+                <th scope="col">Naziv</th>
+                <th scope="col">JM</th>
+                <th scope="col" class="text-end">Ugovorena količina</th>
+                <th scope="col" class="text-end">Jed. cena</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr>
+                    <td>{{ item.code }}</td>
+                    {% if show_category %}
+                        <td>{% if item.category %}{{ item.category.name }}{% else %}-{% endif %}</td>
+                    {% endif %}
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.uom }}</td>
+                    <td class="text-end">{{ item.contract_qty }}</td>
+                    <td class="text-end">{{ item.unit_price }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <p class="text-body-secondary mb-0">{{ message }}</p>
+{% endif %}
+{% endwith %}

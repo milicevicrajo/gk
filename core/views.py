@@ -1,8 +1,11 @@
 ﻿from __future__ import annotations
 
 from typing import Any, Optional
+from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib import messages
+from django.db.models import Prefetch
 from django.contrib.auth.views import LoginView
 from django.http import HttpRequest
 from django.shortcuts import render
@@ -10,8 +13,8 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from .forms import BoQItemForm, GKSheetForm, ProjectForm
-from .models import BoQItem, GKSheet, Project
+from .forms import BoQCategoryForm, BoQItemForm, GKSheetForm, ProjectForm
+from .models import BoQCategory, BoQItem, GKSheet, Project
 from .permissions import user_has_any_role, user_has_role
 
 
@@ -46,7 +49,7 @@ class AppLoginView(LoginView):
                 existing = field.widget.attrs.get('class', '')
                 field.widget.attrs['class'] = f"{existing} form-control".strip()
         form.fields['username'].widget.attrs.setdefault('autofocus', True)
-        form.fields['username'].widget.attrs.setdefault('placeholder', 'Korisničko ime')
+        form.fields['username'].widget.attrs.setdefault('placeholder', 'Korisnicko ime')
         form.fields['password'].widget.attrs.setdefault('placeholder', 'Lozinka')
         return form
 
@@ -60,6 +63,30 @@ class ProjectListView(RoleRequiredMixin, ListView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["can_manage"] = user_has_role(self.request.user, "admin")
+        return context
+
+
+class ProjectDetailView(RoleRequiredMixin, DetailView):
+    model = Project
+    template_name = 'core/project_detail.html'
+    context_object_name = 'project'
+    roles = ('izvodjac', 'nadzor', 'investitor')
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        project: Project = context['project']
+        categories = list(
+            project.boq_categories.order_by('sequence', 'name').prefetch_related(
+                Prefetch('items', queryset=BoQItem.objects.order_by('code'))
+            )
+        )
+        context['categories'] = categories
+        all_items = list(project.boq_items.select_related('category').order_by('category__sequence', 'code'))
+        uncategorised_items = [item for item in all_items if item.category_id is None]
+        context['all_items'] = all_items
+        context['uncategorised_items'] = uncategorised_items
+        context['can_manage'] = user_has_any_role(self.request.user, ('admin', 'izvodjac'))
+        context['total_items'] = len(all_items)
         return context
 
 
@@ -130,6 +157,47 @@ class BoQItemListView(RoleRequiredMixin, ListView):
         return context
 
 
+class BoQCategoryCreateView(RoleRequiredMixin, CreateView):
+    model = BoQCategory
+    form_class = BoQCategoryForm
+    template_name = 'core/boqcategory_form.html'
+    roles = ('admin', 'izvodjac')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        project_id = self.kwargs.get('project_pk') or self.request.GET.get('project')
+        if project_id:
+            initial['project'] = project_id
+        return initial
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        project = self._get_project_from_request()
+        if project:
+            kwargs['project'] = project
+        return kwargs
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Kategorija je saÄuvana.')
+        return response
+
+    def get_success_url(self) -> str:
+        return reverse('core:project-detail', args=[self.object.project_id])
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Nova BoQ kategorija'
+        context['project'] = self._get_project_from_request()
+        return context
+
+    def _get_project_from_request(self) -> Optional[Project]:
+        project_id = self.kwargs.get('project_pk') or self.request.POST.get('project') or self.request.GET.get('project')
+        if project_id:
+            return Project.objects.filter(pk=project_id).first()
+        return None
+
+
 class BoQItemCreateView(RoleRequiredMixin, CreateView):
     model = BoQItem
     form_class = BoQItemForm
@@ -143,6 +211,13 @@ class BoQItemCreateView(RoleRequiredMixin, CreateView):
             initial["project"] = project_id
         return initial
 
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        project = self._get_project_from_request()
+        if project:
+            kwargs['project'] = project
+        return kwargs
+
     def get_success_url(self) -> str:
         return str(reverse_lazy("core:boqitem-list"))
 
@@ -151,6 +226,12 @@ class BoQItemCreateView(RoleRequiredMixin, CreateView):
         context["title"] = "Nova BoQ stavka"
         return context
 
+    def _get_project_from_request(self) -> Optional[Project]:
+        project_id = self.request.POST.get('project') or self.request.GET.get('project')
+        if project_id:
+            return Project.objects.filter(pk=project_id).first()
+        return None
+
 
 class BoQItemUpdateView(RoleRequiredMixin, UpdateView):
     model = BoQItem
@@ -158,6 +239,11 @@ class BoQItemUpdateView(RoleRequiredMixin, UpdateView):
     template_name = "core/boqitem_form.html"
     roles = ("admin", "izvodjac")
     context_object_name = "boq_item"
+
+    def get_form_kwargs(self) -> dict[str, Any]:
+        kwargs = super().get_form_kwargs()
+        kwargs['project'] = self.get_object().project
+        return kwargs
 
     def get_success_url(self) -> str:
         return str(reverse_lazy("core:boqitem-list"))
@@ -217,7 +303,13 @@ class GKSheetDetailView(RoleRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
+        sheet: GKSheet = context["sheet"]
         context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
+        remaining = None
+        contract_qty = getattr(sheet.boq_item, 'contract_qty', None)
+        if contract_qty is not None:
+            remaining = (contract_qty or Decimal('0')) - (sheet.qty_cumulative or Decimal('0'))
+        context["remaining_qty"] = remaining
         return context
 
 
@@ -253,6 +345,17 @@ class GKSheetCreateView(RoleRequiredMixin, CreateView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context["title"] = "Novi list GK"
+        context["sheet"] = None
+        boq_id = self.request.POST.get('boq_item') or self.request.GET.get('boq')
+        remaining = None
+        if boq_id:
+            boq_item = BoQItem.objects.filter(pk=boq_id).first()
+            if boq_item:
+                last_sheet = boq_item.gk_sheets.order_by('-seq_no').first()
+                base_qty = (boq_item.contract_qty or Decimal('0'))
+                used_qty = (last_sheet.qty_cumulative if last_sheet else Decimal('0')) or Decimal('0')
+                remaining = base_qty - used_qty
+        context["remaining_qty"] = remaining
         return context
 
     def _get_project_from_request(self) -> Optional[Project]:
@@ -279,7 +382,13 @@ class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
+        sheet: GKSheet = context["sheet"]
         context["title"] = "Izmena lista GK"
+        contract_qty = getattr(sheet.boq_item, 'contract_qty', None)
+        remaining = None
+        if contract_qty is not None:
+            remaining = (contract_qty or Decimal('0')) - (sheet.qty_cumulative or Decimal('0'))
+        context["remaining_qty"] = remaining
         return context
 
 
@@ -301,3 +410,6 @@ def index(request: HttpRequest):
         "active_projects": Project.objects.filter(is_active=True).count(),
     }
     return render(request, "core/index.html", {"stats": stats})
+
+
+

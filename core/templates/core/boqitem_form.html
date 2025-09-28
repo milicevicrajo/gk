@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -15,6 +15,15 @@
             {{ form.project }}
             {% if form.project.errors %}
                 <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="id_category">Kategorija</label>
+            {{ form.category }}
+            {% if form.category.errors %}
+                <div class="invalid-feedback d-block">{{ form.category.errors|join:', ' }}</div>
+            {% elif form.category.field.queryset.count == 0 %}
+                <div class="form-text">Nema definisanih kategorija za izabrani projekat.</div>
             {% endif %}
         </div>
         <div class="col-md-2">

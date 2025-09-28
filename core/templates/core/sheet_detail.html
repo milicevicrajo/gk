@@ -1,74 +1,94 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}GK list {{ sheet.boq_item.code }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sheet.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">GK list #{{ sheet.pk }}</h1>
-        <p class="text-body-secondary mb-0">{{ sheet.project.name }} � {{ sheet.boq_item.code }} / {{ sheet.boq_item.title }}</p>
+<div class="sheet-page">
+    <div class="sheet-header">
+        <div><span class="label">Gradilište:</span> <span class="value">{{ sheet.project.name }}</span></div>
+        <div><span class="label">Sektor:</span> <span class="value">{{ sheet.project.location|default:"-" }}</span></div>
+        <div><span class="label">Objekat:</span> <span class="value">{{ sheet.boq_item.title|default:"-" }}</span></div>
+        <div><span class="label">Vrsta rada:</span> <span class="value">{{ sheet.boq_item.title }}</span></div>
+        <div><span class="label">Jedinica mere:</span> <span class="value">{{ sheet.boq_item.uom }}</span></div>
+        <div><span class="label">Šifra:</span> <span class="value">{{ sheet.boq_item.code }}</span></div>
     </div>
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Nazad</a>
-        {% if can_manage %}
-            <a class="btn btn-primary" href="{% url 'core:sheet-update' sheet.pk %}">Izmeni</a>
-            <a class="btn btn-danger" href="{% url 'core:sheet-delete' sheet.pk %}">Obri�i</a>
-        {% endif %}
+
+    <div class="sheet-title">
+        <h1>Obračunski list građevinske knjige</h1>
+        <div class="text-muted">List broj {{ sheet.seq_no }}</div>
     </div>
-</div>
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Osnovni podaci</h2>
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Projekat</dt>
-                    <dd class="col-sm-8">{{ sheet.project.name }}</dd>
-                    <dt class="col-sm-4">BoQ</dt>
-                    <dd class="col-sm-8">{{ sheet.boq_item.code }} - {{ sheet.boq_item.title }}</dd>
-                    <dt class="col-sm-4">Sekvenca</dt>
-                    <dd class="col-sm-8">{{ sheet.seq_no }}</dd>
-                    <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8"><span class="badge badge-secondary text-uppercase">{{ sheet.get_status_display }}</span></dd>
-                    <dt class="col-sm-4">Period</dt>
-                    <dd class="col-sm-8">
-                        {% if sheet.period_from %}{{ sheet.period_from|date:"d.m.Y" }}{% endif %}
-                        {% if sheet.period_to %}- {{ sheet.period_to|date:"d.m.Y" }}{% endif %}
-                    </dd>
-                </dl>
+
+    <table class="sheet-meta-table">
+        <thead>
+            <tr>
+                <th>Jedin. cena</th>
+                <th>Po</th>
+                <th>Količina ugovorno</th>
+                <th>Količina ovaj list</th>
+                <th>Kumulativ</th>
+                <th>Preostalo</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ sheet.boq_item.unit_price|default:"-" }}</td>
+                <td>{{ sheet.boq_item.uom }}</td>
+                <td>{{ sheet.boq_item.contract_qty|default:"-" }}</td>
+                <td>{{ sheet.qty_this_period|default:"-" }}</td>
+                <td>{{ sheet.qty_cumulative|default:"-" }}</td>
+                <td>{% if remaining_qty is not None %}{{ remaining_qty }}{% else %}-{% endif %}</td>
+                <td>{{ sheet.get_status_display }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="sheet-body">
+        <div class="section-title">Opis radova</div>
+        <div class="note">{{ sheet.note|default:"Nema dodatnih napomena." }}</div>
+
+        <table class="sheet-summary-table">
+            <thead>
+                <tr>
+                    <th>Period od</th>
+                    <th>Period do</th>
+                    <th>Datum kreiranja</th>
+                    <th>Datum ažuriranja</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{% if sheet.period_from %}{{ sheet.period_from|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+                    <td>{% if sheet.period_to %}{{ sheet.period_to|date:"d.m.Y" }}{% else %}-{% endif %}</td>
+                    <td>{{ sheet.created_at|date:"d.m.Y" }}</td>
+                    <td>{{ sheet.updated_at|date:"d.m.Y" }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="sheet-footer">
+            <div class="signature">
+                <div class="label">Odgovorni izvođač</div>
+                <div class="line"></div>
+            </div>
+            <div class="signature">
+                <div class="label">Nadzorni organ</div>
+                <div class="line"></div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Kolicine</h2>
-                <dl class="row mb-0">
-                    <dt class="col-sm-6">Kolicina (period)</dt>
-                    <dd class="col-sm-6">{{ sheet.qty_this_period }}</dd>
-                    <dt class="col-sm-6">Kumulativ</dt>
-                    <dd class="col-sm-6">{{ sheet.qty_cumulative }}</dd>
-                </dl>
-                {% if sheet.note %}
-                    <hr>
-                    <h3 class="h6 text-uppercase text-body-secondary">Napomena</h3>
-                    <p class="mb-0">{{ sheet.note }}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
-<div class="card">
-    <div class="card-body">
-        <h2 class="h6 text-uppercase text-body-secondary">Meta podaci</h2>
-        <dl class="row mb-0">
-            <dt class="col-sm-4">Kreirao</dt>
-            <dd class="col-sm-8">{{ sheet.created_by.get_full_name|default:sheet.created_by.username }}</dd>
-            <dt class="col-sm-4">Kreirano</dt>
-            <dd class="col-sm-8">{{ sheet.created_at }}</dd>
-            <dt class="col-sm-4">A�urirano</dt>
-            <dd class="col-sm-8">{{ sheet.updated_at }}</dd>
-        </dl>
-    </div>
+
+<div class="d-print-none">
+    <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Nazad na listu</a>
+    {% if can_manage %}
+        <a class="btn btn-primary" href="{% url 'core:sheet-update' sheet.pk %}">Izmeni</a>
+        <a class="btn btn-danger" href="{% url 'core:sheet-delete' sheet.pk %}">Obriši</a>
+    {% endif %}
 </div>
 {% endblock %}

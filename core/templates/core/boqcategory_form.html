@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">{{ title }}</h1>
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
+    {% endif %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label" for="id_project">Projekat</label>
+            {{ form.project }}
+            {% if form.project.errors %}
+                <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="id_sequence">Redni broj</label>
+            {{ form.sequence }}
+            {% if form.sequence.errors %}
+                <div class="invalid-feedback d-block">{{ form.sequence.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="id_name">Naziv</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+                <div class="invalid-feedback d-block">{{ form.name.errors|join:', ' }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Sačuvaj</button>
+        {% if project %}
+            <a class="btn btn-outline-secondary" href="{% url 'core:project-detail' project.pk %}">Otkaži</a>
+        {% else %}
+            <a class="btn btn-outline-secondary" href="{% url 'core:project-list' %}">Otkaži</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

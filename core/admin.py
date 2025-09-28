@@ -1,6 +1,6 @@
 ﻿from django.contrib import admin
 
-from .models import BoQItem, GKSheet, Project
+from .models import BoQCategory, BoQItem, GKSheet, Project
 
 
 @admin.register(Project)
@@ -11,12 +11,20 @@ class ProjectAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
 
+@admin.register(BoQCategory)
+class BoQCategoryAdmin(admin.ModelAdmin):
+    list_display = ("project", "sequence", "name")
+    list_filter = ("project",)
+    search_fields = ("name", "project__name")
+    ordering = ("project__name", "sequence")
+
+
 @admin.register(BoQItem)
 class BoQItemAdmin(admin.ModelAdmin):
-    list_display = ("code", "project", "uom", "contract_qty", "unit_price", "is_closed")
-    list_filter = ("project", "closed_at")
-    search_fields = ("code", "title", "project__name")
-    ordering = ("project__name", "code")
+    list_display = ("code", "project", "category", "uom", "contract_qty", "unit_price", "is_closed")
+    list_filter = ("project", "category", "closed_at")
+    search_fields = ("code", "title", "project__name", "category__name")
+    ordering = ("project__name", "category__sequence", "code")
     readonly_fields = ("closed_at",)
 
 

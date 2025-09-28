@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Projekti{% endblock %}
 
@@ -25,7 +25,7 @@
         <tbody>
             {% for project in projects %}
                 <tr>
-                    <td class="fw-semibold">{{ project.name }}</td>
+                    <td class="fw-semibold"><a href="{% url 'core:project-detail' project.pk %}">{{ project.name }}</a></td>
                     <td>{{ project.location|default:"-" }}</td>
                     <td>{{ project.description|default:"-" }}</td>
                     <td>
