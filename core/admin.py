@@ -21,11 +21,11 @@ class BoQCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(BoQItem)
 class BoQItemAdmin(admin.ModelAdmin):
-    list_display = ("code", "project", "category", "uom", "contract_qty", "unit_price", "is_closed")
-    list_filter = ("project", "category", "closed_at")
+    list_display = ("code", "project", "category", "uom", "contract_qty", "unit_price")
+    list_filter = ("project", "category")
     search_fields = ("code", "title", "project__name", "category__name")
     ordering = ("project__name", "category__sequence", "code")
-    readonly_fields = ("closed_at",)
+
 
 
 @admin.register(GKSheet)

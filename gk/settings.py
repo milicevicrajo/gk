@@ -9,24 +9,53 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Učitaj .env (po defaultu .env u rootu; možeš promeniti preko ENV_FILE varijable)
+ENV_FILE = os.getenv("ENV_FILE", None)
+if ENV_FILE:
+    load_dotenv(ENV_FILE)
+else:
+    # prvo pokušaj .env, pa .env.production, pa .env.development
+    if (BASE_DIR / ".env").exists():
+        load_dotenv(BASE_DIR / ".env")
+    elif (BASE_DIR / ".env.production").exists():
+        load_dotenv(BASE_DIR / ".env.production")
+    elif (BASE_DIR / ".env.development").exists():
+        load_dotenv(BASE_DIR / ".env.development")
 
+def env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+def env_list(name: str, default: str = "") -> list[str]:
+    raw = os.getenv(name, default)
+    return [x.strip() for x in raw.split(",") if x.strip()]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-gkw72z@1f2(y_yp1re@p0=8mr5t1779-p(@@ppa)67^4(jcixm'
 
+SECRET_KEY = os.getenv("SECRET_KEY", "!!!SET_SECRET_KEY_IN_ENV!!!")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# --- HOSTS & SECURITY ---
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 
 # Application definition
 
@@ -76,11 +105,13 @@ WSGI_APPLICATION = 'gk.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,  # keep-alive konekcije
+        ssl_require=False if DEBUG else None,  # za Postgres u produkciji često True
+    )
 }
 
 
@@ -118,10 +149,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+# --- STATIC & MEDIA ---
+STATIC_URL = "static/"
+STATIC_ROOT = os.getenv("STATIC_ROOT") or (BASE_DIR / "staticfiles")
+
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = os.getenv("MEDIA_ROOT") or (BASE_DIR / "media")
 
 LOGIN_URL = 'core:login'
 LOGIN_REDIRECT_URL = 'core:index'

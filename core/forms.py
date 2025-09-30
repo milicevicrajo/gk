@@ -84,10 +84,9 @@ class BoQCategoryForm(BaseBootstrapForm):
 class BoQItemForm(BaseBootstrapForm):
     class Meta:
         model = BoQItem
-        fields = [ 'project', 'category', 'code', 'title', 'uom', 'contract_qty', 'unit_price', 'closed_at', 'close_note']
+        fields = [ 'project', 'category', 'code', 'title', 'uom', 'contract_qty', 'unit_price', 'close_note']
         widgets = {
             'close_note': forms.Textarea(attrs={'rows': 3}),
-            'closed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'project': Select2MultipleWidget(attrs={'class': 'select2-method'}),
         }
 
