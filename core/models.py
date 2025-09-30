@@ -11,6 +11,7 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
+    boq_currency = models.CharField(max_length=3, default='EUR')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self) -> str:
@@ -31,7 +32,7 @@ class BoQCategory(models.Model):
         unique_together = ("project", "sequence")
 
     def __str__(self) -> str:
-        return f"{self.project.name} – {self.sequence:02d}. {self.name}"
+        return f"{self.project.name} - {self.sequence:02d}. {self.name}"
 
 
 class BoQItem(models.Model):
@@ -48,7 +49,6 @@ class BoQItem(models.Model):
     uom = models.CharField(max_length=20)
     contract_qty = models.DecimalField(max_digits=16, decimal_places=3, default=0)
     unit_price = models.DecimalField(max_digits=16, decimal_places=2, default=0)
-    closed_at = models.DateTimeField(null=True, blank=True)  # zatvaranje pozicije (opciono)
     close_note = models.TextField(blank=True)
 
     class Meta:

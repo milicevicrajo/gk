@@ -1,84 +1,129 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block extra_css %}{{ block.super }}{{ form.media.css }}{% endblock %}
+{% block extra_js %}{{ block.super }}{{ form.media.js }}{% endblock %}
+
 {% block content %}
-<h1 class="h3 mb-4">{{ title }}</h1>
-<form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
-    {% endif %}
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <label class="form-label" for="id_project">Projekat</label>
-            {{ form.project }}
-            {% if form.project.errors %}
-                <div class="invalid-feedback d-block">{{ form.project.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-4">
-            <label class="form-label" for="id_category">Kategorija</label>
-            {{ form.category }}
-            {% if form.category.errors %}
-                <div class="invalid-feedback d-block">{{ form.category.errors|join:', ' }}</div>
-            {% elif form.category.field.queryset.count == 0 %}
-                <div class="form-text">Nema definisanih kategorija za izabrani projekat.</div>
-            {% endif %}
-        </div>
-        <div class="col-md-2">
-            <label class="form-label" for="id_code">Šifra</label>
-            {{ form.code }}
-            {% if form.code.errors %}
-                <div class="invalid-feedback d-block">{{ form.code.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-6">
-            <label class="form-label" for="id_title">Naziv</label>
-            {{ form.title }}
-            {% if form.title.errors %}
-                <div class="invalid-feedback d-block">{{ form.title.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_uom">JM</label>
-            {{ form.uom }}
-            {% if form.uom.errors %}
-                <div class="invalid-feedback d-block">{{ form.uom.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_contract_qty">Ugovorena količina</label>
-            {{ form.contract_qty }}
-            {% if form.contract_qty.errors %}
-                <div class="invalid-feedback d-block">{{ form.contract_qty.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_unit_price">Jedinična cena</label>
-            {{ form.unit_price }}
-            {% if form.unit_price.errors %}
-                <div class="invalid-feedback d-block">{{ form.unit_price.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="id_closed_at">Datum zatvaranja</label>
-            {{ form.closed_at }}
-            {% if form.closed_at.errors %}
-                <div class="invalid-feedback d-block">{{ form.closed_at.errors|join:', ' }}</div>
-            {% endif %}
-        </div>
-        <div class="col-12">
-            <label class="form-label" for="id_close_note">Napomena</label>
-            {{ form.close_note }}
-            {% if form.close_note.errors %}
-                <div class="invalid-feedback d-block">{{ form.close_note.errors|join:', ' }}</div>
-            {% endif %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h1 class="h4 mb-4">{{ title }}</h1>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors|join:' ' }}</div>
+                    {% endif %}
+                    
+                    {# Sva polja su sada unutar col-12 za vertikalni redosled #}
+                    <div class="row g-3 mb-4">
+                        
+{# Polje: Projekat #}
+                        <div class="col-12">
+                            {# Dodata klasa d-block i mb-1 #}
+                            <label class="form-label d-block mb-1" for="{{ form.project.id_for_label }}">Projekat</label>
+                            {# Koristi se add_class: Ako polje ima greške, dodaje se "is-invalid" klasa #}
+                            {% render_field form.project class="form-select"|add_class:form.project.errors|yesno:"is-invalid," %}
+                            
+                            {# Prikaz grešaka #}
+                            {% for error in form.project.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Kategorija #}
+                        <div class="col-12">
+                            {# Dodata klasa d-block i mb-1 #}
+                            <label class="form-label d-block mb-1" for="{{ form.category.id_for_label }}">Kategorija</label>
+                            
+                            {# Ažurirana logika za Kategoriju #}
+                            {% if form.category.field.queryset.count == 0 and not form.category.errors %}
+                                {% render_field form.category class="form-select" disabled="disabled" %}
+                                <div class="form-text">Nema definisanih kategorija za izabrani projekat.</div>
+                            {% else %}
+                                {# Dodajemo klasu "is-invalid" samo ako polje ima grešku #}
+                                {% render_field form.category class="form-select"|add_class:form.category.errors|yesno:"is-invalid," %}
+                            {% endif %}
+                            
+                            {% for error in form.category.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Sifra #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.code.id_for_label }}">Šifra</label>
+                            {% render_field form.code class="form-control" %}
+                            {% for error in form.code.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Naziv #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.title.id_for_label }}">Naziv</label>
+                            {% render_field form.title class="form-control" %}
+                            {% for error in form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: JM (Jedinica mere) #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.uom.id_for_label }}">JM</label>
+                            {% render_field form.uom class="form-control" %}
+                            {% for error in form.uom.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Ugovorena količina #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.contract_qty.id_for_label }}">Ugovorena količina</label>
+                            {% render_field form.contract_qty class="form-control" %}
+                            {% for error in form.contract_qty.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Jedinična cena #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.unit_price.id_for_label }}">Jedinična cena</label>
+                            {% render_field form.unit_price class="form-control" %}
+                            {% for error in form.unit_price.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Datum zatvaranja #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.closed_at.id_for_label }}">Datum zatvaranja</label>
+                            {% render_field form.closed_at class="form-control" %}
+                            {% for error in form.closed_at.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        {# Polje: Napomena #}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.close_note.id_for_label }}">Napomena</label>
+                            {% render_field form.close_note class="form-control" %}
+                            {% for error in form.close_note.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Sačuvaj</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'core:boqitem-list' %}">Otkaži</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Sačuvaj</button>
-        <a class="btn btn-outline-secondary" href="{% url 'core:boqitem-list' %}">Otkaži</a>
-    </div>
-</form>
+</div>
 {% endblock %}

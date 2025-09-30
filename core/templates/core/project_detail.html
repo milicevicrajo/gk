@@ -16,35 +16,38 @@
         </div>
     {% endif %}
 </div>
-<div class="row mb-4">
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Informacije</h2>
-                <dl class="row mb-0">
-                    <dt class="col-sm-5">Status</dt>
-                    <dd class="col-sm-7">{% if project.is_active %}<span class="badge badge-success">Aktivan</span>{% else %}<span class="badge badge-secondary">Arhiviran</span>{% endif %}</dd>
-                    <dt class="col-sm-5">Ukupno stavki</dt>
-                    <dd class="col-sm-7">{{ total_items }}</dd>
-                    <dt class="col-sm-5">Kategorije</dt>
-                    <dd class="col-sm-7">{{ categories|length }}</dd>
-                    <dt class="col-sm-5">Opis</dt>
-                    <dd class="col-sm-7">{{ project.description|default:"Nema opisa" }}</dd>
-                    <dt class="col-sm-5">Kreirano</dt>
-                    <dd class="col-sm-7">{{ project.created_at|date:"d.m.Y" }}</dd>
-                </dl>
+
+    <div class="row mb-4">
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informacije</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Status</dt>
+                        <dd class="col-sm-7">{% if project.is_active %}<span class="badge badge-success">Aktivan</span>{% else %}<span class="badge badge-secondary">Arhiviran</span>{% endif %}</dd>
+                        <dt class="col-sm-5">Ukupno stavki</dt>
+                        <dd class="col-sm-7">{{ total_items }}</dd>
+                        <dt class="col-sm-5">Kategorije</dt>
+                        <dd class="col-sm-7">{{ categories|length }}</dd>
+                        <dt class="col-sm-5">Opis</dt>
+                        <dd class="col-sm-7">{{ project.description|default:"Nema opisa" }}</dd>
+                        <dt class="col-sm-5">Kreirano</dt>
+                        <dd class="col-sm-7">{{ project.created_at|date:"d.m.Y" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-body-secondary">Napomene</h2>
+                    <p class="mb-0 text-body-secondary">Dodelite kategorije BoQ stavkama kako bi tabovi ispod prikazali jasnu strukturu po vrstama radova. Stavke bez kategorije nalaze se u posebnom tabu.</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-8">
-        <div class="card h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-body-secondary">Napomene</h2>
-                <p class="mb-0 text-body-secondary">Dodelite kategorije BoQ stavkama kako bi tabovi ispod prikazali jasnu strukturu po vrstama radova. Stavke bez kategorije nalaze se u posebnom tabu.</p>
-            </div>
-        </div>
-    </div>
-</div>
 <ul class="nav nav-tabs" role="tablist">
     <li class="nav-item" role="presentation">
         <a class="nav-link active" data-toggle="tab" href="#tab-overview" role="tab" aria-selected="true">Sve stavke</a>

@@ -1,20 +1,41 @@
 from django import forms
+from django_select2.forms import Select2MultipleWidget, Select2Widget
 
 from .models import BoQCategory, BoQItem, GKSheet, Project
 
 
 class BaseBootstrapForm(forms.ModelForm):
     select_fields = (forms.Select, forms.SelectMultiple)
+    select2_map = {
+        forms.Select: Select2Widget,
+        forms.SelectMultiple: Select2MultipleWidget,
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             widget = field.widget
+            for base_widget, select2_widget in self.select2_map.items():
+                if isinstance(widget, select2_widget):
+                    break
+                if isinstance(widget, base_widget):
+                    attrs = widget.attrs.copy()
+                    choices = getattr(widget, 'choices', None)
+                    field.widget = select2_widget(attrs=attrs)
+                    if choices is not None:
+                        field.widget.choices = choices
+                    widget = field.widget
+                    break
             existing = widget.attrs.get('class', '')
             if isinstance(widget, forms.CheckboxInput):
                 css_class = 'form-check-input'
+            elif isinstance(widget, (Select2Widget, Select2MultipleWidget)):
+                css_class = 'form-select w-100'
+                widget.attrs.setdefault('data-width', '100%')
+                widget.attrs.setdefault('style', 'width: 100%;')
             elif isinstance(widget, self.select_fields):
-                css_class = 'form-select'
+                css_class = 'form-select w-100'
+                widget.attrs.setdefault('style', 'width: 100%;')
             else:
                 css_class = 'form-control'
             widget.attrs['class'] = f"{existing} {css_class}".strip()
@@ -63,10 +84,11 @@ class BoQCategoryForm(BaseBootstrapForm):
 class BoQItemForm(BaseBootstrapForm):
     class Meta:
         model = BoQItem
-        fields = ['project', 'category', 'code', 'title', 'uom', 'contract_qty', 'unit_price', 'closed_at', 'close_note']
+        fields = [ 'project', 'category', 'code', 'title', 'uom', 'contract_qty', 'unit_price', 'closed_at', 'close_note']
         widgets = {
             'close_note': forms.Textarea(attrs={'rows': 3}),
             'closed_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'project': Select2MultipleWidget(attrs={'class': 'select2-method'}),
         }
 
     def __init__(self, *args, project=None, **kwargs):
@@ -160,4 +182,3 @@ class GKSheetForm(BaseBootstrapForm):
         if project and boq_item and boq_item.project_id != project.id:
             self.add_error('boq_item', 'BoQ stavka mora pripadati izabranom projektu.')
         return cleaned
-
