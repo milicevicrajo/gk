@@ -84,6 +84,8 @@ TEMPLATES = [{
 WSGI_APPLICATION = "gk.wsgi.application"
 
 # Database
+print(f"DEBUGGING CHECK: DATABASE_URL is set to -> {os.environ.get('DATABASE_URL')}")
+
 DATABASE_URL = env.str("DATABASE_URL", default="sqlite:///db.sqlite3")
 DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
 
