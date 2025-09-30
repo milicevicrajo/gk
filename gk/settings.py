@@ -102,7 +102,7 @@ STATIC_URL = "static/"
 STATIC_ROOT = env.str("STATIC_ROOT", default="") or str(BASE_DIR / "staticfiles")
 MEDIA_URL  = env.str("MEDIA_URL",  default="/media/")
 MEDIA_ROOT = env.str("MEDIA_ROOT", default="") or str(BASE_DIR / "media")
-
+STATICFILES_DIRS = [BASE_DIR / "static"]  # ne mešati sa STATIC_ROOT!
 # Auth redirects
 LOGIN_URL = "core:login"
 LOGIN_REDIRECT_URL = "core:index"
