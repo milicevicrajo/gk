@@ -13,45 +13,30 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import dj_database_url
+import environ
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-# Učitaj .env (po defaultu .env u rootu; možeš promeniti preko ENV_FILE varijable)
-ENV_FILE = os.getenv("ENV_FILE", None)
-if ENV_FILE:
-    load_dotenv(ENV_FILE)
-else:
-    # prvo pokušaj .env, pa .env.production, pa .env.development
-    if (BASE_DIR / ".env").exists():
-        load_dotenv(BASE_DIR / ".env")
-    elif (BASE_DIR / ".env.production").exists():
-        load_dotenv(BASE_DIR / ".env.production")
-    elif (BASE_DIR / ".env.development").exists():
-        load_dotenv(BASE_DIR / ".env.development")
+BASE_DIR = Path(__file__).resolve().parents[2]
+env = environ.Env()
+environ.Env.read_env() 
 
-def env_bool(name: str, default: bool = False) -> bool:
-    return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+DEBUG = env.bool("DEBUG", default=False)
+SECRET_KEY = env.str("SECRET_KEY", default="CHANGE_ME_DEV_ONLY")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 
-def env_list(name: str, default: str = "") -> list[str]:
-    raw = os.getenv(name, default)
-    return [x.strip() for x in raw.split(",") if x.strip()]
+# ──────────────────────────────────────────────────────────────────────────────
+# Security
+# ──────────────────────────────────────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0 if DEBUG else 31536000)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG
+)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-
-SECRET_KEY = os.getenv("SECRET_KEY", "!!!SET_SECRET_KEY_IN_ENV!!!")
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-# --- HOSTS & SECURITY ---
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "")
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
-
-SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
-SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
-CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
