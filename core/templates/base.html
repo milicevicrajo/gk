@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'vendor/fontawesome-free/css/all.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/sb-admin-2.min.css' %}">
     <link rel="icon" type="image/x-icon" href="{% static 'img/favico.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/a4.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body id="page-top">
@@ -89,7 +90,12 @@
                         </div>
                     </div>
                 {% endif %}
-                {% block content %}{% endblock %}
+                {% block content %}
+                {% endblock %}
+                {# NOVO: A4 sadržaj, nezavisan od gore #}
+                <div class="container-fluid">
+                    {% block a4_content %}{% endblock %}
+                </div>
             </div>
         </div>
         <footer class="sticky-footer bg-white">

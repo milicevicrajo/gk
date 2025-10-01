@@ -1,148 +1,158 @@
-﻿.sheet-page {
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0 auto 2rem;
-    padding: 18mm 15mm;
-    background: #ffffff;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.12);
-    font-family: "Segoe UI", Arial, sans-serif;
-    color: #1a1a1a;
+﻿/* ===== A4 i osnove ===== */
+@page { size: A4 portrait; margin: 0; }
+.sheet-page{ width:210mm; height:297mm; box-sizing:border-box; }
+
+:root{
+  --ink:#000;
+  --thin:1px;
+  --pad-x:14mm;   /* leva/desna unutrašnja margina */
+  --pad-y:12mm;   /* gornja/donja unutrašnja margina */
+  --font:"Times New Roman","Georgia",serif;
+  --fs:12pt;
 }
 
-.sheet-page h1,
-.sheet-page h2,
-.sheet-page h3,
-.sheet-page h4,
-.sheet-page h5 {
-    font-weight: 600;
-    margin: 0;
-}
+html, body { background:#f7f7f7; }
+@media print { html, body { background:#fff; } }
 
-.sheet-header {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-row-gap: 6px;
-    grid-column-gap: 12px;
-    margin-bottom: 12px;
-    font-size: 12px;
-    text-transform: uppercase;
+.sheet-page{
+  width:210mm; height:297mm;                 /* TAČNO A4 */
+  margin:0 auto 1rem;
+  background:#fff; color:var(--ink);
+  box-sizing:border-box;
+  padding:var(--pad-y) var(--pad-x);
+  border:var(--thin) solid var(--ink);
+  display:flex;                               /* ključ: kolona koja se rasteže */
+  flex-direction:column;
+  gap:6mm;
+  font-family:var(--font);
+  font-size:var(--fs);
 }
-
-.sheet-header .label {
-    font-weight: 700;
-    color: #555;
-    margin-right: 4px;
-}
-
-.sheet-title {
-    text-align: center;
-    margin: 12px 0;
-}
-
-.sheet-title h1 {
-    font-size: 20px;
-    color: #c62828;
-    letter-spacing: 0.5px;
-}
-
-.sheet-meta-table {
-    width: 100%;
-    border: 1px solid #c62828;
-    border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 12px;
-}
-
-.sheet-meta-table th,
-.sheet-meta-table td {
-    border: 1px solid #c62828;
-    padding: 6px 8px;
-    vertical-align: middle;
-}
-
-.sheet-meta-table thead th {
-    background: rgba(198, 40, 40, 0.08);
-    font-weight: 700;
-    text-align: center;
-}
-
-.sheet-body {
-    border: 1px solid #262626;
-    min-height: 120mm;
-    padding: 10px 12px;
-    font-size: 12px;
-    display: flex;
-    flex-direction: column;
-}
-
-.sheet-body .section-title {
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-.sheet-body .note {
-    white-space: pre-line;
-    line-height: 1.45;
-}
-
-.sheet-summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 12px;
-}
-
-.sheet-summary-table th,
-.sheet-summary-table td {
-    border: 1px solid #262626;
-    padding: 6px 8px;
-    text-align: right;
-}
-
-.sheet-summary-table th {
-    background: rgba(0, 0, 0, 0.05);
-    text-align: center;
-}
-
-.sheet-footer {
-    margin-top: auto;
-    padding-top: 16px;
-    display: flex;
-    justify-content: space-between;
-    gap: 40px;
-    font-size: 12px;
-}
-
-.sheet-footer .signature {
-    flex: 1;
-    text-align: center;
-}
-
-.sheet-footer .signature .line {
-    margin-top: 32px;
-    border-bottom: 1px solid #262626;
-}
-
-.form-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-}
-
 @media print {
-    body {
-        background: #fff;
-    }
+  .sheet-page{ margin:0; border:none; }
+}
 
-    .sheet-page {
-        margin: 0;
-        box-shadow: none;
-        page-break-after: always;
-    }
+/* ===== gornje meta sekcije ===== */
+.top-meta{
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6mm;
+}
+.label{ font-weight:600; }
+.sub{ opacity:.0 } /* placeholder da ne lomi raspored */
 
-    .form-actions,
-    .btn,
-    .alert {
-        display: none !important;
-    }
+.sheet-title{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  border-bottom:var(--thin) solid var(--ink);
+  padding-bottom:4mm;
+}
+.sheet-title .title{ font-weight:700; font-size:18pt; }
+.sheet-title .list-no .line{
+  display:inline-block; min-width:32mm; border-bottom:var(--thin) solid var(--ink);
+}
+
+/* ===== gornja meta tabela ===== */
+.meta-wide{ width:100%; border-collapse:collapse; table-layout:fixed; }
+.meta-wide th, .meta-wide td{
+  border:var(--thin) solid var(--ink);
+  padding:3mm 3mm 2mm;
+  vertical-align:top;
+}
+.meta-wide thead th{ font-weight:700; text-align:left; }
+.meta-wide .vrsta-rada textarea{
+  width:100%; min-height:28mm; border:none; resize:vertical;
+  background:transparent;
+  font-family:var(--font); font-size:var(--fs);
+}
+.meta-wide .mini{ font-size:11pt; }
+
+/* ===== GLAVNA MREŽA koja PUNI OSTATAK DO DNA ===== */
+/* Omotač mreže zauzima sav preostali prostor A4 stranice,
+   a potpisi i extra-row ostaju ispod. */
+.grid-flex{
+  flex:1 1 auto;      /* rastegni do dna */
+  min-height:0;       /* omogućava 100% visine unutra bez prelivanja */
+  display:flex;
+  /* ako mreža ide "previše nisko", povećaj margin-bottom na npr. 12mm */
+  margin-bottom: 8mm; /* prostor za potpise iz navike obrasca */
+}
+
+.grid-main{
+  width:100%; height:100%;
+  border-collapse:collapse; table-layout:fixed;
+}
+.grid-main thead th,
+.grid-main td{
+  border:var(--thin) solid var(--ink);
+  text-align:center;
+}
+.grid-main thead th{ font-weight:700; padding:2mm; }
+
+/* Jedan red koji puni visinu omotača (nema 240mm!) */
+.grid-main tbody tr{ height:100%; }
+.grid-main td.tall{
+  height:100%;
+  padding:0; vertical-align:top;
+}
+
+.sheet-input{
+  width:100%; height:100%;
+  border:none; resize:none; background:transparent;
+  padding:2mm; box-sizing:border-box;
+  font:var(--fs) var(--font);
+}
+.sheet-input.right{ text-align:right; }
+
+/* Deblja vertikala levo od “Mesečno/Ukupno” (opciono, za vernost obrascu) */
+.grid-main td:nth-child(2),
+.grid-main th:nth-child(2){ border-left-width:2px; }
+
+/* ===== potpisi i donja meta ===== */
+.signatures{
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6mm;
+  align-items:end;
+}
+.signatures .who{ font-size:11pt; margin-bottom:8mm; }
+.signatures .line{ height:0; border-bottom:var(--thin) solid var(--ink); }
+.signatures .short-line{ width:28mm; margin:auto; height:0; border-bottom:var(--thin) solid var(--ink); }
+.signatures .center{ text-align:center; }
+
+.extra-row{
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:6mm;
+  font-size:11pt;
+}
+.extra-row .right{ text-align:right; }
+
+/* ==== Viewport za A4: tačna širina na ekranu i centruj ==== */
+.sheet-viewport{
+  width: 210mm;         /* stvarna širina A4 */
+  margin: 0 auto;       /* centriraj na ekranu */
+  padding: 0;
+}
+
+/* ==== A4 strana (ostaje tvoja logika) ==== */
+@page { size: A4 portrait; margin: 0; }
+.sheet-page{
+  width: 210mm;
+  height: 297mm;        /* TAČNO A4 */
+  box-sizing: border-box;
+  margin: 0;            /* bez dodatnog sužavanja */
+  /* ako želiš unutrašnji “bleed”, koristi padding ovde */
+}
+
+/* ==== Neutralizuj Bootstrap SAMO unutar sheet-a ==== */
+.sheet-viewport .row,
+.sheet-viewport [class*="col-"]{
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* container oko content bloka često sužava stranu – razvuci ga */
+main .container, main .container-fluid{
+  max-width: none;
+}
+
+/* Za ekran: zadrži razmeru 1:1 mm (nema scale) */
+@media screen {
+  html, body { zoom: 1; }         /* drži 100% u browseru */
 }

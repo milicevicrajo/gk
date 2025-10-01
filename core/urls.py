@@ -12,10 +12,12 @@ urlpatterns = [
     path('projects/create/', views.ProjectCreateView.as_view(), name='project-create'),
     path('projects/<int:pk>/edit/', views.ProjectUpdateView.as_view(), name='project-update'),
     path('projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project-delete'),
+
     path('boq/', views.BoQItemListView.as_view(), name='boqitem-list'),
     path('boq/create/', views.BoQItemCreateView.as_view(), name='boqitem-create'),
     path('boq/<int:pk>/edit/', views.BoQItemUpdateView.as_view(), name='boqitem-update'),
     path('boq/<int:pk>/delete/', views.BoQItemDeleteView.as_view(), name='boqitem-delete'),
+    path("projects/<int:project_id>/boq/import/", views.BoQImportView.as_view(), name="boq_import"),
     path('login/', views.AppLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='core:login'), name='logout'),
 

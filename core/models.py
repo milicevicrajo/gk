@@ -52,7 +52,7 @@ class BoQItem(models.Model):
     close_note = models.TextField(blank=True)
 
     class Meta:
-        unique_together = ('project', 'code')
+        unique_together = ('project', 'code', 'category')
         indexes = [
             models.Index(fields=['project', 'code']),
             models.Index(fields=['project', 'category', 'code']),

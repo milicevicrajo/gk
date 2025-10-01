@@ -1,94 +1,79 @@
 {% extends "base.html" %}
-{% load static %}
+{% block a4_content %}
+<div class="a4-host">
+  <div class="a4-scroller">
+    <div class="a4-viewport">
+      <section class="a4-page">
 
-{% block title %}GK list {{ sheet.boq_item.code }}{% endblock %}
+        <div class="sheet-header">
+        <div class="meta-line">
+            <div class="meta-item">Градилиште: <span class="dotted"></span></div>
+            <div class="meta-item">Сектор: <span class="dotted"></span></div>
+            <div class="meta-item">Објекат: <span class="dotted"></span></div>
+        </div>
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sheet.css' %}">
-{% endblock %}
+        <div class="title-line">
+            <div class="title">Обрачунски лист грађевинске књиге</div>
+            <div class="list-number">Лист број ..........</div>
+        </div>
+        </div>
 
-{% block content %}
-<div class="sheet-page">
-    <div class="sheet-header">
-        <div><span class="label">Gradilište:</span> <span class="value">{{ sheet.project.name }}</span></div>
-        <div><span class="label">Sektor:</span> <span class="value">{{ sheet.project.location|default:"-" }}</span></div>
-        <div><span class="label">Objekat:</span> <span class="value">{{ sheet.boq_item.title|default:"-" }}</span></div>
-        <div><span class="label">Vrsta rada:</span> <span class="value">{{ sheet.boq_item.title }}</span></div>
-        <div><span class="label">Jedinica mere:</span> <span class="value">{{ sheet.boq_item.uom }}</span></div>
-        <div><span class="label">Šifra:</span> <span class="value">{{ sheet.boq_item.code }}</span></div>
-    </div>
+        <!-- META BLOK -->
+<table class="meta-table join-bottom">
+  <colgroup>
+    <col style="width:38%">
+    <col style="width:16%">
+    <col style="width:14%">
+    <col style="width:16%">
+    <col style="width:16%">
+  </colgroup>
+  <tr>
+    <td colspan="2">Врста радова: <span class="dotted"></span></td>
+    <td>Град. норма <span class="dotted"></span><br><span class="small">Шифра</span> <span class="dotted w60"></span></td>
+    <td>Обрач. нацрта бр. <span class="dotted"></span></td>
+    <td>Поз. предрач. бр. <span class="dotted"></span></td>
+  </tr>
+  <tr>
+    <!-- samo Јединична цена levo, Мера desno -->
+    <td colspan="4">Јединична цена дин. <span class="dotted"></span> <span class="small">по</span> <span class="dotted w60"></span></td>
+    <td>Мера <span class="dotted w60"></span></td>
+  </tr>
+</table>
 
-    <div class="sheet-title">
-        <h1>Obračunski list građevinske knjige</h1>
-        <div class="text-muted">List broj {{ sheet.seq_no }}</div>
-    </div>
-
-    <table class="sheet-meta-table">
-        <thead>
-            <tr>
-                <th>Jedin. cena</th>
-                <th>Po</th>
-                <th>Količina ugovorno</th>
-                <th>Količina ovaj list</th>
-                <th>Kumulativ</th>
-                <th>Preostalo</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>{{ sheet.boq_item.unit_price|default:"-" }}</td>
-                <td>{{ sheet.boq_item.uom }}</td>
-                <td>{{ sheet.boq_item.contract_qty|default:"-" }}</td>
-                <td>{{ sheet.qty_this_period|default:"-" }}</td>
-                <td>{{ sheet.qty_cumulative|default:"-" }}</td>
-                <td>{% if remaining_qty is not None %}{{ remaining_qty }}{% else %}-{% endif %}</td>
-                <td>{{ sheet.get_status_display }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="sheet-body">
-        <div class="section-title">Opis radova</div>
-        <div class="note">{{ sheet.note|default:"Nema dodatnih napomena." }}</div>
-
-        <table class="sheet-summary-table">
+        <!-- GLAVNI GRID -->
+        <div class="grid-flex">
+        <table class="grid-main">
+            <colgroup>
+            <col style="width:60%">
+            <col style="width:20%">
+            <col style="width:20%">
+            </colgroup>
             <thead>
-                <tr>
-                    <th>Period od</th>
-                    <th>Period do</th>
-                    <th>Datum kreiranja</th>
-                    <th>Datum ažuriranja</th>
-                </tr>
+            <tr>
+                <th>A, B, A+B</th>
+                <th>Месечно</th>
+                <th>Укупно</th>
+            </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>{% if sheet.period_from %}{{ sheet.period_from|date:"d.m.Y" }}{% else %}-{% endif %}</td>
-                    <td>{% if sheet.period_to %}{{ sheet.period_to|date:"d.m.Y" }}{% else %}-{% endif %}</td>
-                    <td>{{ sheet.created_at|date:"d.m.Y" }}</td>
-                    <td>{{ sheet.updated_at|date:"d.m.Y" }}</td>
-                </tr>
+            <tr>
+                <td class="tall"><textarea class="sheet-input"></textarea></td>
+                <td class="tall"><textarea class="sheet-input right"></textarea></td>
+                <td class="tall"><textarea class="sheet-input right"></textarea></td>
+            </tr>
             </tbody>
         </table>
-
-        <div class="sheet-footer">
-            <div class="signature">
-                <div class="label">Odgovorni izvođač</div>
-                <div class="line"></div>
-            </div>
-            <div class="signature">
-                <div class="label">Nadzorni organ</div>
-                <div class="line"></div>
-            </div>
         </div>
-    </div>
-</div>
 
-<div class="d-print-none">
-    <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Nazad na listu</a>
-    {% if can_manage %}
-        <a class="btn btn-primary" href="{% url 'core:sheet-update' sheet.pk %}">Izmeni</a>
-        <a class="btn btn-danger" href="{% url 'core:sheet-delete' sheet.pk %}">Obriši</a>
-    {% endif %}
+        <!-- POTPISI -->
+        <div style="margin-top:10mm; display:flex; justify-content:space-between;">
+          <div>Izradio: _____________________</div>
+          <div>Overio: _____________________</div>
+        </div>
+
+      </section>
+    </div>
+  </div>
 </div>
 {% endblock %}
+

@@ -181,3 +181,20 @@ class GKSheetForm(BaseBootstrapForm):
         if project and boq_item and boq_item.project_id != project.id:
             self.add_error('boq_item', 'BoQ stavka mora pripadati izabranom projektu.')
         return cleaned
+    
+
+ALLOWED_EXTS = {".xls", ".xlsx"}
+
+class BoQExcelUploadForm(forms.Form):
+    excel = forms.FileField(label="Excel (BoQ)", help_text=".xls ili .xlsx")
+    clear_existing = forms.BooleanField(
+        label="Obriši postojeće stavke i kategorije pre importa",
+        required=False
+    )
+
+    def clean_excel(self):
+        f = self.cleaned_data["excel"]
+        name = (f.name or "").lower()
+        if not any(name.endswith(ext) for ext in ALLOWED_EXTS):
+            raise forms.ValidationError("Dozvoljeni formati su .xls i .xlsx")
+        return f

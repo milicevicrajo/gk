@@ -8,13 +8,18 @@
         <h1 class="h3 mb-1">{{ project.name }}</h1>
         <p class="text-body-secondary mb-0">Lokacija: {{ project.location|default:"Nije definisana" }}</p>
     </div>
-    {% if can_manage %}
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="{% url 'core:project-update' project.pk %}">Izmeni</a>
-            <a class="btn btn-outline-primary" href="{% url 'core:boqcategory-create' project.pk %}">Nova kategorija</a>
-            <a class="btn btn-primary" href="{% url 'core:boqitem-create' %}?project={{ project.pk }}">Nova BoQ stavka</a>
-        </div>
-    {% endif %}
+        {% if can_manage %}
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="{% url 'core:project-update' project.pk %}">Izmeni</a>
+                <a class="btn btn-outline-primary" href="{% url 'core:boqcategory-create' project.pk %}">Nova kategorija</a>
+                <a class="btn btn-primary" href="{% url 'core:boqitem-create' %}?project={{ project.pk }}">Nova BoQ stavka</a>
+
+                {# NOVO: otvara modal za import #}
+                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#boqImportModal">
+                    Importuj BoQ
+                </button>
+            </div>
+        {% endif %}
 </div>
 
     <div class="row mb-4">
@@ -78,4 +83,50 @@
         </div>
     {% endif %}
 </div>
+
+{# === MODAL: IMPORT BOQ IZ EXCEL-A === #}
+<div class="modal fade" id="boqImportModal" tabindex="-1" role="dialog" aria-labelledby="boqImportLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form method="post" action="{% url 'core:boq_import' project.pk %}" enctype="multipart/form-data" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title" id="boqImportLabel">Import BoQ — {{ project.name }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Zatvori">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        {# Ako u contextu proslediš Django formu (BoQExcelUploadForm), koristi je ovde.
+           U suprotnom, plain inputi ispod rade odmah. #}
+
+        {# Plain file input (radi bez forme u contextu) #}
+        <div class="form-group">
+          <label for="id_excel">Excel fajl (.xls, .xlsx)</label>
+          <input type="file" name="excel" accept=".xls,.xlsx" required class="form-control-file" id="id_excel">
+          <small class="form-text text-muted">Odaberi obračun (BoQ) Excel koji će biti uvezen.</small>
+        </div>
+
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="id_clear_existing" name="clear_existing">
+          <label class="custom-control-label" for="id_clear_existing">
+            Obriši postojeće stavke i kategorije pre importa
+          </label>
+        </div>
+
+        <hr class="my-3">
+        <p class="text-muted mb-0">
+          Import kreira/azurira stavke po šifri (code = position_id) i otvara/azurira kategorije po redosledu sheet-ova.
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Otkaži</button>
+        <button type="submit" class="btn btn-success">Pokreni import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 {% endblock %}

@@ -16,7 +16,18 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from .forms import BoQCategoryForm, BoQItemForm, GKSheetForm, ProjectForm
 from .models import BoQCategory, BoQItem, GKSheet, Project
 from .permissions import user_has_any_role, user_has_role
+from tempfile import NamedTemporaryFile
+from pathlib import Path
 
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views import View
+
+from .forms import BoQExcelUploadForm
+from .models import Project
+from .utils.boq_import import import_boq_excel
 
 class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     roles: tuple[str, ...] = ()
@@ -268,6 +279,55 @@ class BoQItemDeleteView(RoleRequiredMixin, DeleteView):
         context.setdefault("title", "Brisanje BoQ stavke")
         return context
 
+class BoQImportView(LoginRequiredMixin, View):
+    template_name = "app/boq_import.html"
+
+    def get(self, request, project_id: int):
+        project = get_object_or_404(Project, pk=project_id)
+        form = BoQExcelUploadForm()
+        return render(request, self.template_name, {"form": form, "project": project})
+
+    def post(self, request, project_id: int):
+        project = get_object_or_404(Project, pk=project_id)
+        form = BoQExcelUploadForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form, "project": project})
+
+        upload = form.cleaned_data["excel"]
+        clear_existing = form.cleaned_data["clear_existing"]
+
+        # Sačuvaj upload u privremeni fajl (jer import_boq_excel očekuje path)
+        with NamedTemporaryFile(delete=False, suffix=Path(upload.name).suffix) as tmp:
+            for chunk in upload.chunks():
+                tmp.write(chunk)
+            tmp_path = Path(tmp.name)
+
+        try:
+            stats = import_boq_excel(
+                project=project,
+                excel_path=tmp_path,
+                clear_existing=clear_existing,
+            )
+            msg = (
+                f"Import OK — kategorije: {stats['categories']}, "
+                f"kreirano: {stats['created']}, ažurirano: {stats['updated']}, "
+                f"preskočeno: {stats['skipped']}."
+            )
+            messages.success(request, msg)
+            if stats.get("warnings"):
+                for w in stats["warnings"]:
+                    messages.warning(request, w)
+        except Exception as e:
+            messages.error(request, f"Greška pri importu: {e}")
+        finally:
+            # očisti privremeni fajl
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        # vrati na projekat ili na istu formu — po želji
+        return redirect(reverse("core:project-detail", args=[project.id]))
 
 class GKSheetListView(RoleRequiredMixin, ListView):
     model = GKSheet
