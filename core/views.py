@@ -169,7 +169,42 @@ class BoQItemListView(RoleRequiredMixin, ListView):
         context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
         return context
 
+class BoQItemDetailView(DetailView):
+    model = BoQItem
+    template_name = "core/boqitem_detail.html"
+    context_object_name = "item"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        item: BoQItem = ctx["item"]
+
+        sheets_qs = (
+            GKSheet.objects.filter(boq_item=item)
+            .select_related("created_by")
+            .order_by("seq_no")
+        )
+
+        approved_sum = sheets_qs.filter(status="approved").aggregate(s=Sum("qty_this_period"))["s"] or Decimal("0")
+        submitted_sum = sheets_qs.filter(status__in=["submitted", "approved"]).aggregate(s=Sum("qty_this_period"))["s"] or Decimal("0")
+        last_cumulative = sheets_qs.order_by("-seq_no").values_list("qty_cumulative", flat=True).first() or Decimal("0")
+
+        remaining_qty = None
+        if item.contract_qty is not None:
+            remaining_qty = (item.contract_qty or Decimal("0")) - (last_cumulative or Decimal("0"))
+
+        # >>> ovde dodajemo can_manage
+        can_manage = user_has_any_role(self.request.user, ("admin", "izvodjac"))
+
+        ctx.update({
+            "sheets": sheets_qs,
+            "approved_sum": approved_sum,
+            "submitted_sum": submitted_sum,
+            "last_cumulative": last_cumulative,
+            "remaining_qty": remaining_qty,
+            "can_manage": can_manage,
+        })
+        return ctx
+    
 class BoQCategoryCreateView(RoleRequiredMixin, CreateView):
     model = BoQCategory
     form_class = BoQCategoryForm

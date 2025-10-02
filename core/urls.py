@@ -17,7 +17,9 @@ urlpatterns = [
     path('boq/create/', views.BoQItemCreateView.as_view(), name='boqitem-create'),
     path('boq/<int:pk>/edit/', views.BoQItemUpdateView.as_view(), name='boqitem-update'),
     path('boq/<int:pk>/delete/', views.BoQItemDeleteView.as_view(), name='boqitem-delete'),
+    path('boq/<int:pk>/', views.BoQItemDetailView.as_view(), name='boqitem-detail'),
     path("projects/<int:project_id>/boq/import/", views.BoQImportView.as_view(), name="boq_import"),
+    
     path('login/', views.AppLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(next_page='core:login'), name='logout'),
 

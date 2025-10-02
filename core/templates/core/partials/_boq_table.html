@@ -21,9 +21,13 @@
                     {% if show_category %}
                         <td>{% if item.category %}{{ item.category.name }}{% endif %}</td>
                     {% endif %}
-                    <td>{{ item.title }}</td>
+                    <td>
+                        <a href="{% url 'core:boqitem-detail' item.pk %}">
+                            {{ item.title }}
+                        </a>
+                    </td>
                     <td>{{ item.uom }}</td>
-                    <td class="text-end">{{ item.contract_qty }}</td>
+                    <td class="text-end">{{ item.contract_qty|floatformat:1 }}</td>
                     <td class="text-end">{{ item.unit_price }}</td>
 
                     {% if show_actions %}

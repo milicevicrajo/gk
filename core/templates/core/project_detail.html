@@ -40,6 +40,8 @@
                         <dd class="col-sm-7">{{ project.description|default:"Nema opisa" }}</dd>
                         <dt class="col-sm-5">Kreirano</dt>
                         <dd class="col-sm-7">{{ project.created_at|date:"d.m.Y" }}</dd>
+                        <dt class="col-sm-5">Valuta</dt>
+                        <dd class="col-sm-7">{{ project.boq_currency}}</dd>
                     </dl>
                 </div>
             </div>
@@ -94,7 +96,6 @@
                         </div>
                     {% endif %}
                     </div>
-
                 </div>
             </div>
         </div>

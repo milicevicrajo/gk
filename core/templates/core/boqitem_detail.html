@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0 text-gray-800">
+    Stavka iz predmera: {{ item.code }}
+  </h1>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary" href="{% url 'core:project-detail' item.project.id %}">
+      Nazad na projekat
+    </a>
+    <a class="btn btn-outline-primary" href="{% url 'core:boqitem-update' item.pk %}">
+      Izmeni
+    </a>
+    <a class="btn btn-outline-danger"
+       href="{% url 'core:boqitem-delete' item.pk %}"
+       onclick="return confirm('Obrisati stavku {{ item.code }}?');">
+      Obriši
+    </a>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-lg-4">
+    <div class="card shadow mb-4 h-100">
+      <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Informacije</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Šifra</dt>
+          <dd class="col-sm-7">{{ item.code }}</dd>
+
+          <dt class="col-sm-5">Naziv</dt>
+          <dd class="col-sm-7">{{ item.title }}</dd>
+
+          <dt class="col-sm-5">JM</dt>
+          <dd class="col-sm-7">{{ item.uom }}</dd>
+
+          <dt class="col-sm-5">Jed. cena</dt>
+          <dd class="col-sm-7">{{ item.unit_price }}</dd>
+
+          <dt class="col-sm-5">Ugov. količina</dt>
+          <dd class="col-sm-7">{{ item.contract_qty }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow mb-4 h-100">
+      <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Stanje realizacije</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-6">Kumulativ poslednjeg lista</dt>
+          <dd class="col-sm-6">{{ last_cumulative }}</dd>
+
+          <dt class="col-sm-6">Odobreno do sada</dt>
+          <dd class="col-sm-6">{{ approved_sum }}</dd>
+
+          <dt class="col-sm-6">Prijavljeno (subm.+appr.)</dt>
+          <dd class="col-sm-6">{{ submitted_sum }}</dd>
+
+          {% if remaining_qty is not None %}
+          <dt class="col-sm-6">Preostalo do ugovorenog</dt>
+          <dd class="col-sm-6">{{ remaining_qty }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+      {% if can_manage %}
+      <div class="card-footer d-flex justify-content-end">
+        <a class="btn btn-success" href="{% url 'core:sheet-create' %}?boq={{ item.id }}">+ Novi GK list</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card shadow mb-12">
+  <div class="card-header py-3 d-flex justify-content-between align-items-center">
+    <h6 class="m-0 font-weight-bold text-primary">GK listovi za stavku</h6>
+    {% if can_manage %}
+    <a class="btn btn-outline-success btn-sm" href="{% url 'core:sheet-create' %}?boq={{ item.id }}">+ Novi GK list</a>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    {% if sheets %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>List #</th>
+            <th>Period</th>
+            <th class="text-end">Količina (period)</th>
+            <th class="text-end">Kumulativ</th>
+            <th>Status</th>
+            <th>Kreirao</th>
+            <th>Datum</th>
+            <th class="text-end">Akcije</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sheets %}
+          <tr>
+            <td>L{{ s.seq_no|stringformat:"04d" }}</td>
+            <td>
+              {% if s.period_from %}{{ s.period_from|date:"d.m.Y" }}{% endif %}
+              –
+              {% if s.period_to %}{{ s.period_to|date:"d.m.Y" }}{% endif %}
+            </td>
+            <td class="text-end">{{ s.qty_this_period }}</td>
+            <td class="text-end">{{ s.qty_cumulative }}</td>
+            <td>{{ s.get_status_display }}</td>
+            <td>{% if s.created_by %}{{ s.created_by }}{% endif %}</td>
+            <td>{{ s.created_at|date:"d.m.Y. H:i" }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'core:sheet-detail' s.pk %}">Detalj</a>
+              {% if can_manage %}
+              <a class="btn btn-outline-primary btn-sm" href="{% url 'core:sheet-update' s.pk %}">Izmeni</a>
+              <a class="btn btn-outline-danger btn-sm"
+                 href="{% url 'core:sheet-delete' s.pk %}"
+                 onclick="return confirm('Obrisati GK list L{{ s.seq_no|stringformat:"04d" }}?');">
+                 Obriši
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-body-secondary mb-0">Nema GK listova za ovu stavku.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
