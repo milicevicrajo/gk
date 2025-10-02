@@ -45,7 +45,7 @@ class BoQItem(models.Model):
         blank=True,
     )
     code = models.CharField(max_length=50)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=500)
     uom = models.CharField(max_length=20)
     contract_qty = models.DecimalField(max_digits=16, decimal_places=3, default=0)
     unit_price = models.DecimalField(max_digits=16, decimal_places=2, default=0)
