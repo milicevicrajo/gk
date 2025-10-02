@@ -139,48 +139,72 @@ class BoQItemForm(BaseBootstrapForm):
         return cleaned
 
 
-class GKSheetForm(BaseBootstrapForm):
+from django import forms
+from .models import GKSheet
+
+# forms.py
+from django import forms
+from .models import GKSheet
+
+class GKSheetForm(forms.ModelForm):
+    # Nemodelska, samo za prikaz (nije u Meta.fields)
+    created_at = forms.DateTimeField(disabled=True, required=False)
+    updated_at = forms.DateTimeField(disabled=True, required=False)
+
     class Meta:
         model = GKSheet
-        fields = [
-            'project',
-            'boq_item',
-            'seq_no',
-            'period_from',
-            'period_to',
-            'qty_this_period',
-            'status',
-            'note',
-        ]
+        fields = ["opis_izvedenih_radova", "qty_this_period"]  # samo ova 2 unosimo
+        labels = {
+            "opis_izvedenih_radova": "Opis izvedenih radova",
+            "qty_this_period": "Količina (ovaj list)",
+        }
         widgets = {
-            'period_from': forms.DateInput(attrs={'type': 'date'}),
-            'period_to': forms.DateInput(attrs={'type': 'date'}),
-            'note': forms.Textarea(attrs={'rows': 4}),
+            "opis_izvedenih_radova": forms.Textarea(attrs={
+                "class": "sheet-input",
+                "style": "height:100%;",
+            }),
+            "qty_this_period": forms.NumberInput(attrs={
+                "class": "sheet-input right",
+                "step": "0.001",
+                "min": "0",
+            }),
         }
 
     def __init__(self, *args, **kwargs):
-        project = kwargs.pop('project', None)
+        # Ako tvoj CBV prosleđuje 'project' ranije, pojedi ga da ne pravi TypeError
+        kwargs.pop('project', None)
         super().__init__(*args, **kwargs)
-        self.fields['qty_this_period'].widget.attrs.setdefault('step', '0.001')
-        if project is None and self.instance and self.instance.pk:
-            project = self.instance.project
-        self._set_boq_queryset(project)
+        # popuni read-only datume ako imamo instancu
+        if self.instance and self.instance.pk:
+            self.fields["created_at"].initial = self.instance.created_at
+            self.fields["updated_at"].initial = self.instance.updated_at
 
-    def _set_boq_queryset(self, project):
-        if 'boq_item' not in self.fields:
-            return
-        if project:
-            self.fields['boq_item'].queryset = BoQItem.objects.filter(project=project).order_by('code')
-        else:
-            self.fields['boq_item'].queryset = BoQItem.objects.select_related('project').order_by('project__name', 'code')
+    def clean_qty_this_period(self):
+        v = self.cleaned_data.get("qty_this_period")
+        if v is not None and v < 0:
+            raise forms.ValidationError("Količina ne može biti negativna.")
+        return v
 
-    def clean(self):
-        cleaned = super().clean()
-        project = cleaned.get('project')
-        boq_item = cleaned.get('boq_item')
-        if project and boq_item and boq_item.project_id != project.id:
-            self.add_error('boq_item', 'BoQ stavka mora pripadati izabranom projektu.')
-        return cleaned
+# core/forms.py
+from decimal import Decimal
+from django import forms
+from .models import GKSheet
+
+class GKSheetCreateForm(forms.ModelForm):
+    class Meta:
+        model = GKSheet
+        fields = ["qty_this_period", "opis_izvedenih_radova"]  # samo ova dva su editabilna
+        widgets = {
+            "qty_this_period": forms.NumberInput(attrs={"step": "0.001", "class": "form-control"}),
+            "opis_izvedenih_radova": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
+        }
+
+    def clean_qty_this_period(self):
+        qty = self.cleaned_data.get("qty_this_period") or Decimal("0.000")
+        if qty < 0:
+            raise forms.ValidationError("Količina ne može biti negativna.")
+        return qty
+
     
 
 ALLOWED_EXTS = {".xls", ".xlsx"}

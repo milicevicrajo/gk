@@ -28,6 +28,8 @@ from django.views import View
 from .forms import BoQExcelUploadForm
 from .models import Project
 from .utils.boq_import import import_boq_excel
+from django.db.models import Sum
+from .forms import GKSheetCreateForm
 
 class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     roles: tuple[str, ...] = ()
@@ -373,57 +375,63 @@ class GKSheetDetailView(RoleRequiredMixin, DetailView):
         return context
 
 
-class GKSheetCreateView(RoleRequiredMixin, CreateView):
+class GKSheetCreateView(CreateView):
     model = GKSheet
-    form_class = GKSheetForm
-    template_name = "core/sheet_form.html"
-    roles = ("admin", "izvodjac")
+    form_class = GKSheetCreateForm
+    template_name = "core/sheet_create_form.html"
 
-    def get_initial(self):
-        initial = super().get_initial()
-        if project_id := self.request.GET.get("project"):
-            initial["project"] = project_id
-        if boq_id := self.request.GET.get("boq"):
-            initial["boq_item"] = boq_id
-        initial.setdefault("status", "draft")
-        return initial
 
-    def get_form_kwargs(self) -> dict[str, Any]:
-        kwargs = super().get_form_kwargs()
-        project = self._get_project_from_request()
-        if project:
-            kwargs["project"] = project
-        return kwargs
+    def dispatch(self, request, *args, **kwargs):
+        boq_id = request.GET.get("boq") or kwargs.get("boq_id")
+        self.boq_item = get_object_or_404(BoQItem, pk=boq_id)
+        self.project = self.boq_item.project
+        return super().dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form: GKSheetForm):
-        form.instance.created_by = self.request.user
-        return super().form_valid(form)
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
 
-    def get_success_url(self) -> str:
-        return reverse("core:sheet-detail", args=[self.object.pk])
+        # prethodno odobren kumulativ za ovu BoQ poziciju
+        prev_approved_sum = (
+            GKSheet.objects.filter(boq_item=self.boq_item, status="approved")
+            .aggregate(total=Sum("qty_this_period"))["total"] or Decimal("0.000")
+        ).quantize(Decimal("0.001"))
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Novi list GK"
-        context["sheet"] = None
-        boq_id = self.request.POST.get('boq_item') or self.request.GET.get('boq')
-        remaining = None
-        if boq_id:
-            boq_item = BoQItem.objects.filter(pk=boq_id).first()
-            if boq_item:
-                last_sheet = boq_item.gk_sheets.order_by('-seq_no').first()
-                base_qty = (boq_item.contract_qty or Decimal('0'))
-                used_qty = (last_sheet.qty_cumulative if last_sheet else Decimal('0')) or Decimal('0')
-                remaining = base_qty - used_qty
-        context["remaining_qty"] = remaining
-        return context
+        # sledeći redni broj lista (seq_no) = max+1
+        last = GKSheet.objects.filter(boq_item=self.boq_item).order_by("-seq_no").first()
+        next_seq = (last.seq_no + 1) if last else 1
 
-    def _get_project_from_request(self) -> Optional[Project]:
-        project_id = self.request.POST.get("project") or self.request.GET.get("project")
-        if project_id:
-            return Project.objects.filter(pk=project_id).first()
-        return None
+        ctx.update({
+            "project": self.project,
+            "boq_item": self.boq_item,
+            "next_seq_no": next_seq,
+            "boq_code": self.boq_item.code,
+            "boq_name": getattr(self.boq_item, "name", ""),         # prilagodi imenu polja
+            "boq_unit": getattr(self.boq_item, "uom", ""),         # npr. "m", "kom"...
+            "boq_price": getattr(self.boq_item, "unit_price", None),
+            "contract_qty": getattr(self.boq_item, "contract_qty", None),
+            "prev_approved_sum": prev_approved_sum,
+            # informativno: period ostavljamo da se NE unosi (po zahtevu),
+            # ali ga prikazujemo kao "—" jer je slobodan
+            "period_from": None,
+            "period_to": None,
+        })
+        return ctx
 
+   
+    def form_valid(self, form):
+        # >>> KLJUČNO: commit=False pa ručno setujemo FK pre .save()
+        obj = form.save(commit=False)
+        obj.project = self.project
+        obj.boq_item = self.boq_item
+        obj.created_by = self.request.user
+        # seq_no će tvoj model sam dodeliti, ali možeš i ovde ako želiš pre poruke
+        obj.save()  # sada model.save() ima postavljen boq_item i neće pucati
+        # po želji poruka i redirect
+        return redirect(self.get_success_url())
+    
+    def get_success_url(self):
+        # Po želji: na detalj projekta ili na listu listova za BoQ stavku
+        return reverse("core:project-detail", kwargs={"pk": self.project.pk})
 
 class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
     model = GKSheet
@@ -431,10 +439,10 @@ class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
     template_name = "core/sheet_form.html"
     context_object_name = "sheet"
     roles = ("admin", "izvodjac")
-
-    def get_form_kwargs(self) -> dict[str, Any]:
+    
+    def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["project"] = self.get_object().project
+        kwargs.pop('project', None)  # ako si ga ranije dodavao, skloni da ne smeta ovoj formi
         return kwargs
 
     def get_success_url(self) -> str:

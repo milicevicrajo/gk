@@ -70,9 +70,7 @@ class BoQItem(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
-    @property
-    def is_closed(self) -> bool:
-        return self.closed_at is not None
+
 
 
 class GKSheet(models.Model):
@@ -102,7 +100,7 @@ class GKSheet(models.Model):
     qty_this_period = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
     qty_cumulative  = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
 
-    note = models.TextField(blank=True)
+    opis_izvedenih_radova = models.TextField(blank=True)
     status = models.CharField(max_length=12, choices=STATUS, default="draft")
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_gk_sheets")
@@ -124,15 +122,13 @@ class GKSheet(models.Model):
 
     # --- Validacije domena ---
     def clean(self):
-        if self.project_id != self.boq_item.project_id:
-            raise ValidationError("Project GK lista i BoQ stavke moraju biti isti.")
+        # if self.project_id != self.boq_item.project_id:
+        #     raise ValidationError("Project GK lista i BoQ stavke moraju biti isti.")
         if self.qty_this_period < 0:
             raise ValidationError("Količina u listu ne može biti negativna.")
         if self.period_from and self.period_to and self.period_from > self.period_to:
             raise ValidationError("Period FROM ne može biti posle TO.")
 
-        if self.boq_item.is_closed and self.status in ("draft", "submitted", "approved"):
-            raise ValidationError("BoQ pozicija je zatvorena — nije dozvoljen novi list.")
 
     def _prev_approved_sum(self) -> Decimal:
         """Suma odobrenih količina iz svih PRETHODNIH listova ove pozicije."""

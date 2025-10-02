@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-1">{{ project.name }}</h1>
+        <h1 class="h3 mb-0 text-gray-800">{{ project.name }}</h1>
         <p class="text-body-secondary mb-0">Lokacija: {{ project.location|default:"Nije definisana" }}</p>
     </div>
         {% if can_manage %}
@@ -24,7 +24,7 @@
 
     <div class="row mb-4">
         <div class="col-lg-4">
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4 h-100">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Informacije</h6>
                 </div>
@@ -45,44 +45,60 @@
             </div>
         </div>
         <div class="col-lg-8">
-            <div class="card h-100">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Napomene</h6>
+                </div>
                 <div class="card-body">
-                    <h2 class="h6 text-uppercase text-body-secondary">Napomene</h2>
                     <p class="mb-0 text-body-secondary">Dodelite kategorije BoQ stavkama kako bi tabovi ispod prikazali jasnu strukturu po vrstama radova. Stavke bez kategorije nalaze se u posebnom tabu.</p>
                 </div>
             </div>
         </div>
     </div>
-<ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <a class="nav-link active" data-toggle="tab" href="#tab-overview" role="tab" aria-selected="true">Sve stavke</a>
-    </li>
-    {% for category in categories %}
-        <li class="nav-item" role="presentation">
-            <a class="nav-link" data-toggle="tab" href="#tab-category-{{ category.pk }}" role="tab">{{ category.sequence }}. {{ category.name }}</a>
-        </li>
-    {% endfor %}
-    {% if uncategorised_items %}
-        <li class="nav-item" role="presentation">
-            <a class="nav-link" data-toggle="tab" href="#tab-uncategorised" role="tab">Nekategorizovano</a>
-        </li>
-    {% endif %}
-</ul>
-<div class="tab-content pt-3">
-    <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
-        {% include "core/partials/_boq_table.html" with items=all_items show_category=True %}
+    <div class="row mb-12"> 
+        <div class="col-lg-12">
+            <div class="card shadow mb-12">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Stavke iz predmera po kategorijama</h6>
+                </div>
+                    <div class="card-body">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link active" data-toggle="tab" href="#tab-overview" role="tab" aria-selected="true">Sve stavke</a>
+                        </li>
+                        {% for category in categories %}
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" data-toggle="tab" href="#tab-category-{{ category.pk }}" role="tab">{{ category.name }}</a>
+                            </li>
+                        {% endfor %}
+                        {% if uncategorised_items %}
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" data-toggle="tab" href="#tab-uncategorised" role="tab">Nekategorizovano</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                    <div class="tab-content pt-3">
+                    <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+                        {% include "core/partials/_boq_table.html" with items=all_items show_category=True show_actions=True %}
+                    </div>
+
+                    {% for category in categories %}
+                        <div class="tab-pane fade" id="tab-category-{{ category.pk }}" role="tabpanel">
+                        {% include "core/partials/_boq_table.html" with items=category.items.all show_category=False show_actions=True %}
+                        </div>
+                    {% endfor %}
+
+                    {% if uncategorised_items %}
+                        <div class="tab-pane fade" id="tab-uncategorised" role="tabpanel">
+                        {% include "core/partials/_boq_table.html" with items=uncategorised_items show_category=False show_actions=True empty_message="Nema nekategorizovanih stavki." %}
+                        </div>
+                    {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
-    {% for category in categories %}
-        <div class="tab-pane fade" id="tab-category-{{ category.pk }}" role="tabpanel">
-            {% include "core/partials/_boq_table.html" with items=category.items.all show_category=False %}
-        </div>
-    {% endfor %}
-    {% if uncategorised_items %}
-        <div class="tab-pane fade" id="tab-uncategorised" role="tabpanel">
-            {% include "core/partials/_boq_table.html" with items=uncategorised_items show_category=False empty_message="Nema nekategorizovanih stavki." %}
-        </div>
-    {% endif %}
-</div>
 
 {# === MODAL: IMPORT BOQ IZ EXCEL-A === #}
 <div class="modal fade" id="boqImportModal" tabindex="-1" role="dialog" aria-labelledby="boqImportLabel" aria-hidden="true">

@@ -1,3 +1,4 @@
+{# core/partials/_boq_table.html #}
 {% with message=empty_message|default:"Nema stavki." %}
 {% if items %}
 <div class="table-responsive">
@@ -10,6 +11,7 @@
                 <th scope="col">JM</th>
                 <th scope="col" class="text-end">Ugovorena količina</th>
                 <th scope="col" class="text-end">Jed. cena</th>
+                {% if show_actions %}<th scope="col" class="text-end">Akcije</th>{% endif %}
             </tr>
         </thead>
         <tbody>
@@ -17,12 +19,33 @@
                 <tr>
                     <td>{{ item.code }}</td>
                     {% if show_category %}
-                        <td>{% if item.category %}{{ item.category.name }}{% else %}-{% endif %}</td>
+                        <td>{% if item.category %}{{ item.category.name }}{% endif %}</td>
                     {% endif %}
                     <td>{{ item.title }}</td>
                     <td>{{ item.uom }}</td>
                     <td class="text-end">{{ item.contract_qty }}</td>
                     <td class="text-end">{{ item.unit_price }}</td>
+
+                    {% if show_actions %}
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-outline-success btn-sm"
+                           href="{% url 'core:sheet-create' %}?boq={{ item.id }}"
+                           title="Novi GK list">
+                           <i class="fas fa-plus"></i> GK
+                        </a>
+                        <a class="btn btn-outline-primary btn-sm"
+                           href="{% url 'core:boqitem-update' item.pk %}"
+                           title="Izmeni">
+                           <i class="fas fa-edit"></i>
+                        </a>
+                        <a class="btn btn-outline-danger btn-sm"
+                           href="{% url 'core:boqitem-delete' item.pk %}"
+                           title="Obriši"
+                           onclick="return confirm('Obrisati stavku {{ item.code }}?');">
+                           <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </tbody>

@@ -22,12 +22,6 @@
         </a>
         <hr class="sidebar-divider my-0">
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:sheet-list' %}">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Građevinski listovi</span>
-            </a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link" href="{% url 'core:project-list' %}">
                 <i class="fas fa-project-diagram"></i>
                 <span>Projekti</span>
@@ -36,7 +30,13 @@
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:boqitem-list' %}">
                 <i class="fas fa-list-ul"></i>
-                <span>BoQ stavke</span>
+                <span>Stavke iz premera - BoQ</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:sheet-list' %}">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Građevinski listovi</span>
             </a>
         </li>
         {% block sidebar_extra %}{% endblock %}
