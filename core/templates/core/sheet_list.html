@@ -1,85 +1,65 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Listovi GK{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <!-- Tema za Select2 koja prati Bootstrap 5 izgled (preporuka) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+  {{ filter.form.media.css }}  {# django-select2 CSS #}
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  {{ filter.form.media.js }}   {# django-select2 JS + auto-init #}
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Listovi građevinske knjige</h1>
-    {% if can_manage %}
-        <a class="btn btn-primary" href="{% url 'core:sheet-create' %}">Novi list</a>
-    {% endif %}
-</div>
+
 <form method="get" class="row g-2 align-items-end mb-4">
-    <div class="col-md-3">
-        <label class="form-label" for="project-filter">Projekat</label>
-        <select id="project-filter" name="project" class="form-select">
-            <option value="">Svi projekti</option>
-            {% for project in projects %}
-                <option value="{{ project.pk }}" {% if selected_project|stringformat:'s' == project.pk|stringformat:'s' %}selected{% endif %}>{{ project.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label" for="boq-filter">BoQ stavka</label>
-        <select id="boq-filter" name="boq" class="form-select">
-            <option value="">Sve stavke</option>
-            {% for item in boq_items %}
-                <option value="{{ item.pk }}" {% if selected_boq|stringformat:'s' == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.project.name }} / {{ item.code }} - {{ item.title }}</option>
-            {% endfor %}
-        </select>
-    </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ filter.form.project.id_for_label }}">{{ filter.form.project.label }}</label>
+    {{ filter.form.project }}
+  </div>
+  <div class="col-md-4">
+    <label class="form-label" for="{{ filter.form.boq.id_for_label }}">{{ filter.form.boq.label }}</label>
+    {{ filter.form.boq }}
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary">Filtriraj</button>
+  </div>
+  {% if request.GET.project or request.GET.boq %}
     <div class="col-auto">
-        <button type="submit" class="btn btn-outline-primary">Filtriraj</button>
+      <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Reset</a>
     </div>
-    {% if selected_project or selected_boq %}
-        <div class="col-auto">
-            <a class="btn btn-outline-secondary" href="{% url 'core:sheet-list' %}">Reset</a>
-        </div>
-    {% endif %}
+  {% endif %}
 </form>
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th scope="col">Projekat</th>
-                <th scope="col">BoQ</th>
-                <th scope="col" class="text-center">Sekvenca</th>
-                <th scope="col">Period</th>
-                <th scope="col" class="text-end">Količina (period)</th>
-                <th scope="col" class="text-end">Kumulativ</th>
-                <th scope="col">Status</th>
-                {% if can_manage %}
-                    <th scope="col" class="text-end">Akcije</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for sheet in sheets %}
-                <tr>
-                    <td>{{ sheet.project.name }}</td>
-                    <td>{{ sheet.boq_item.code }} - {{ sheet.boq_item.title }}</td>
-                    <td class="text-center">{{ sheet.seq_no }}</td>
-                    <td>
-                        {% if sheet.period_from %}{{ sheet.period_from|date:"d.m.Y" }}{% endif %}
-                        {% if sheet.period_to %}- {{ sheet.period_to|date:"d.m.Y" }}{% endif %}
-                    </td>
-                    <td class="text-end">{{ sheet.qty_this_period }}</td>
-                    <td class="text-end">{{ sheet.qty_cumulative }}</td>
-                    <td><span class="badge badge-secondary text-uppercase">{{ sheet.get_status_display }}</span></td>
-                    {% if can_manage %}
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'core:sheet-detail' sheet.pk %}">Detalj</a>
-                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:sheet-update' sheet.pk %}">Izmeni</a>
-                            <a class="btn btn-sm btn-outline-danger" href="{% url 'core:sheet-delete' sheet.pk %}">Obriši</a>
-                        </td>
-                    {% endif %}
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="{% if can_manage %}8{% else %}7{% endif %}" class="text-center text-body-secondary">Nema pronađenih listova.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+
+{# Primer tabele #}
+<table class="table table-sm align-middle">
+  <thead>
+    <tr>
+      <th>Proj</th>
+      <th>BoQ</th>
+      <th>Šifra</th>
+      <th>Seq</th>
+      <th>Opis</th>
+      <th>...</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in sheets %}
+    <tr>
+      <td>{{ s.project.name }}</td>
+      <td>{{ s.boq_item.title }}</td>
+      <td>{{ s.boq_item.code }}</td>
+      <td>{{ s.seq_no }}</td>
+      <td class="text-truncate" style="max-width: 360px;" title="{{ s.boq_item.title }}">{{ s.boq_item.title }}</td>
+      <td>...</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="text-muted">Nema podataka za zadati filter.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
 {% endblock %}

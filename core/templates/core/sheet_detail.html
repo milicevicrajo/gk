@@ -34,8 +34,8 @@
           <tr>
             <td colspan="2">
               Vrsta radova:
-              <span class="dotted">
-                {{ sheet.boq_item.title|default:"—" }}
+              <span class="dotted" title="{{ sheet.boq_item.title }}">
+                {{ sheet.boq_item.title|truncatechars:110|default:"—" }}
               </span>
             </td>
             <td>

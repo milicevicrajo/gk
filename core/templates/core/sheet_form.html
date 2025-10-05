@@ -101,11 +101,50 @@
           </div>
 
         </section>
-        <p>Kreirano: {{ sheet.created_at }}</p>
-        <p>Izmenjeno: {{ sheet.updated_at }}</p>
+        <section class="mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted">Trenutni status:</span>
+            {% with st=form.instance.status %}
+              <span class="badge 
+                {% if st == 'draft' %}bg-secondary text-white
+                {% elif st == 'submitted' %}bg-info text-dark
+                {% elif st == 'approved' %}bg-success text-white
+                {% elif st == 'rejected' %}bg-danger text-white
+                {% elif st == 'locked' %}bg-dark text-white
+                {% else %}bg-light text-dark{% endif %}">
+                {{ form.instance.get_status_display }}
+              </span>
+            {% endwith %}
+          </div>
+        </section>
 
-        <!-- Submit dugmad unutar <form> -->
-        <div class="mt-3" style="display:flex; gap:.5rem; justify-content:flex-end;">
+
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <label class="form-label">Novi status (promeni ako želiš)</label>
+            {{ form.status }}
+            {% if form.status.errors %}
+              <div class="invalid-feedback d-block">{{ form.status.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-sm-4">
+            <label class="form-label">Period od</label>
+            {{ form.period_from }}
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">Period do</label>
+            {{ form.period_to }}
+          </div>
+
+
+
+        <hr class="my-3">
+
+        <p>Kreirano: {{ form.instance.created_at }}</p>
+        <p>Izmenjeno: {{ form.instance.updated_at }}</p>
+
+        <div class="mt-3 d-flex gap-2 justify-content-end">
           <button type="submit" class="btn btn-primary">Sačuvaj</button>
           <a href="{% url 'core:sheet-list' %}" class="btn btn-outline-secondary">Otkaži</a>
         </div>

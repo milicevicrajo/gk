@@ -2,7 +2,7 @@ from django import forms
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 
 from .models import BoQCategory, BoQItem, GKSheet, Project
-
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 class BaseBootstrapForm(forms.ModelForm):
     select_fields = (forms.Select, forms.SelectMultiple)
@@ -145,28 +145,48 @@ from .models import GKSheet
 # forms.py
 from django import forms
 from .models import GKSheet
-
+STATUS_LABELS = {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "locked": "Locked",
+}
 class GKSheetForm(forms.ModelForm):
+    # Pregazi polje iz modela kao CharField da FORSIRA TextInput
+    qty_this_period = forms.CharField(
+        widget=forms.TextInput(attrs={
+            "class": "sheet-input right",   # ili "form-control" ako koristiš Bootstrap
+            "inputmode": "decimal",
+            "pattern": r"^\d*[.,]?\d*$",
+            "placeholder": "0,000 ili 0.000",
+            "autocomplete": "off",
+        }),
+        required=True,
+        label="Količina u ovom periodu",
+    )
     # Nemodelska, samo za prikaz (nije u Meta.fields)
     created_at = forms.DateTimeField(disabled=True, required=False)
     updated_at = forms.DateTimeField(disabled=True, required=False)
 
     class Meta:
         model = GKSheet
-        fields = ["opis_izvedenih_radova", "qty_this_period"]  # samo ova 2 unosimo
+        fields = ["opis_izvedenih_radova", "qty_this_period", "status", ]  # samo ova 2 unosimo
         labels = {
             "opis_izvedenih_radova": "Opis izvedenih radova",
             "qty_this_period": "Količina (ovaj list)",
         }
         widgets = {
+            "status": forms.Select(attrs={"class": "form-select"}),
             "opis_izvedenih_radova": forms.Textarea(attrs={
                 "class": "sheet-input",
                 "style": "height:100%;",
             }),
-            "qty_this_period": forms.NumberInput(attrs={
+            "qty_this_period": forms.TextInput(attrs={
                 "class": "sheet-input right",
-                "step": "0.001",
-                "min": "0",
+                "inputmode": "decimal",              # numerička tastatura na mobilnim uređajima
+                "pattern": r"^\d*[.,]?\d*$",         # dozvoljava samo cifre, tačku i zarez
+                "placeholder": "0,00 ili 0.00",    # hint korisniku
             }),
         }
 
@@ -180,10 +200,37 @@ class GKSheetForm(forms.ModelForm):
             self.fields["updated_at"].initial = self.instance.updated_at
 
     def clean_qty_this_period(self):
-        v = self.cleaned_data.get("qty_this_period")
-        if v is not None and v < 0:
-            raise forms.ValidationError("Količina ne može biti negativna.")
-        return v
+        raw = self.cleaned_data.get("qty_this_period", "")
+        # normalizacija: ukloni razmake, NBSP, zameni zarez tačkom
+        s = (
+            str(raw)
+            .replace("\u00A0", "")  # NBSP
+            .replace(" ", "")
+            .replace(",", ".")
+            .strip()
+        )
+
+        # prazno?
+        if s == "":
+            raise forms.ValidationError("Unesite vrednost.")
+
+        # pokušaj konverzije
+        try:
+            value = Decimal(s)
+        except (InvalidOperation, ValueError):
+            raise forms.ValidationError("Unesite ispravan broj (tačka ili zarez su dozvoljeni).")
+
+        # validacije TEK POSLE konverzije
+        if value < Decimal("0"):
+            raise forms.ValidationError("Vrednost ne može biti negativna.")
+
+        # opcionalno: validiraj korak od 0.001
+        if (value % Decimal("0.001")) != 0:
+            raise forms.ValidationError("Dozvoljene su najviše 3 decimale (korak 0.001).")
+
+        # zaokruži na 3 decimale i vrati Decimal (model ima DecimalField)
+        return value.quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+    
 
 # core/forms.py
 from decimal import Decimal
@@ -191,20 +238,60 @@ from django import forms
 from .models import GKSheet
 
 class GKSheetCreateForm(forms.ModelForm):
+    qty_this_period = forms.CharField(
+        widget=forms.TextInput(attrs={
+            "class": "sheet-input right small-input",
+            "inputmode": "decimal",
+            "pattern": r"^\d*[.,]?\d*$",
+            "placeholder": "0,00 ili 0.00",
+            "autocomplete": "off",
+
+        })
+    )
     class Meta:
         model = GKSheet
         fields = ["qty_this_period", "opis_izvedenih_radova"]  # samo ova dva su editabilna
         widgets = {
-            "qty_this_period": forms.NumberInput(attrs={"step": "0.001", "class": "form-control"}),
+            # "qty_this_period": forms.TextInput(attrs={
+            #     "class": "sheet-input right",
+            #     "inputmode": "decimal",              # numerička tastatura na mobilnim uređajima
+            #     "pattern": r"^\d*[.,]?\d*$",         # dozvoljava samo cifre, tačku i zarez
+            #     "placeholder": "0,00 ili 0.00",    # hint korisniku
+            # }),
             "opis_izvedenih_radova": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
         }
 
     def clean_qty_this_period(self):
-        qty = self.cleaned_data.get("qty_this_period") or Decimal("0.000")
-        if qty < 0:
-            raise forms.ValidationError("Količina ne može biti negativna.")
-        return qty
+        raw = self.cleaned_data.get("qty_this_period", "")
+        # normalizacija: ukloni razmake, NBSP, zameni zarez tačkom
+        s = (
+            str(raw)
+            .replace("\u00A0", "")  # NBSP
+            .replace(" ", "")
+            .replace(",", ".")
+            .strip()
+        )
 
+        # prazno?
+        if s == "":
+            raise forms.ValidationError("Unesite vrednost.")
+
+        # pokušaj konverzije
+        try:
+            value = Decimal(s)
+        except (InvalidOperation, ValueError):
+            raise forms.ValidationError("Unesite ispravan broj (tačka ili zarez su dozvoljeni).")
+
+        # validacije TEK POSLE konverzije
+        if value < Decimal("0"):
+            raise forms.ValidationError("Vrednost ne može biti negativna.")
+
+        # opcionalno: validiraj korak od 0.001
+        if (value % Decimal("0.001")) != 0:
+            raise forms.ValidationError("Dozvoljene su najviše 3 decimale (korak 0.001).")
+
+        # zaokruži na 3 decimale i vrati Decimal (model ima DecimalField)
+        return value.quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
     
 
 ALLOWED_EXTS = {".xls", ".xlsx"}

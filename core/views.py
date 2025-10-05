@@ -2,7 +2,12 @@
 
 from typing import Any, Optional
 from decimal import Decimal
+from typing import Any
+from django.db.models import F
+from django_filters.views import FilterView
 
+from .models import GKSheet
+from .filters import GKSheetFilter
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.db.models import Prefetch
@@ -366,30 +371,26 @@ class BoQImportView(LoginRequiredMixin, View):
         # vrati na projekat ili na istu formu — po želji
         return redirect(reverse("core:project-detail", args=[project.id]))
 
-class GKSheetListView(RoleRequiredMixin, ListView):
+class GKSheetListView(RoleRequiredMixin, FilterView):
     model = GKSheet
-    context_object_name = "sheets"
     template_name = "core/sheet_list.html"
+    context_object_name = "sheets"
     roles = ("izvodjac", "nadzor", "investitor")
+    filterset_class = GKSheetFilter
 
     def get_queryset(self):
-        queryset = GKSheet.objects.select_related("project", "boq_item").order_by("boq_item__code", "seq_no")
-        project_id = self.request.GET.get("project")
-        boq_id = self.request.GET.get("boq")
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-        if boq_id:
-            queryset = queryset.filter(boq_item_id=boq_id)
-        return queryset
+        # Osnovni queryset sa optimizacijama
+        qs = (
+            GKSheet.objects
+            .select_related("project", "boq_item", "boq_item__project")
+            .order_by("boq_item__code", "seq_no")
+        )
+        return qs
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        context["projects"] = Project.objects.order_by("name")
-        context["boq_items"] = BoQItem.objects.select_related("project").order_by("project__name", "code")
-        context["selected_project"] = self.request.GET.get("project", "")
-        context["selected_boq"] = self.request.GET.get("boq", "")
-        context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
-        return context
+        ctx = super().get_context_data(**kwargs)
+        ctx["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
+        return ctx
 
 
 class GKSheetDetailView(RoleRequiredMixin, DetailView):

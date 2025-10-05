@@ -52,9 +52,16 @@ USE_X_FORWARDED_HOST = True
 
 # Apps
 INSTALLED_APPS = [
-    "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
-    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "core", "django_select2", "widget_tweaks",
+    "django.contrib.admin", 
+    "django.contrib.auth", 
+    "django.contrib.contenttypes",
+    "django.contrib.sessions", 
+    "django.contrib.messages", 
+    "django.contrib.staticfiles",
+    "core", 
+    "django_select2", 
+    "widget_tweaks",
+    "django_filters",
 ]
 
 MIDDLEWARE = [
