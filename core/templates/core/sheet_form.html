@@ -38,7 +38,7 @@
               <col style="width:16%">
             </colgroup>
             <tr>
-              <td colspan="2">Vrsta radova: <span class="dotted">{{ sheet.opis_izvedenih_radova }}</span></td>
+              <td colspan="2">Vrsta radova: <span class="dotted" title="{{ sheet.boq_item.title }}">{{ sheet.boq_item.title|truncatechars:110|default:"—" }}</span></td>
               <td>Grad. norma <span class="dotted"></span><br><span class="small">Šifra</span> <span class="dotted w60"></span></td>
               <td>Obrač. nacrta br. <span class="dotted"></span></td>
               <td>Poz. predrač. br. <span class="dotted"></span></td>

@@ -40,7 +40,7 @@
               <td colspan="2">
                 Vrsta radova:
 
-                <span class="dotted">{{boq_item.title}}</span>
+                <span class="dotted" title="{{ boq_item.title }}">{{ boq_item.title|truncatechars:110|default:"—" }}</span>
                 </span>
               </td>
               <td>
