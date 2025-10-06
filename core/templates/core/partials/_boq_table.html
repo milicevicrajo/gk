@@ -1,15 +1,16 @@
 {# core/partials/_boq_table.html #}
+{% with table_id=table_id|default:'boq-table' %}
 {% with message=empty_message|default:"Nema stavki." %}
 {% if items %}
 <div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead>
+    <table id="{{ table_id }}" class="table table-striped table-bordered align-middle w-100">
+        <thead class="thead-light">
             <tr>
-                <th scope="col">Šifra</th>
+                <th scope="col">Sifra</th>
                 {% if show_category %}<th scope="col">Kategorija</th>{% endif %}
                 <th scope="col">Naziv</th>
                 <th scope="col">JM</th>
-                <th scope="col" class="text-end">Ugovorena količina</th>
+                <th scope="col" class="text-end">Ugovorena kolicina</th>
                 <th scope="col" class="text-end">Jed. cena</th>
                 {% if show_actions %}<th scope="col" class="text-end">Akcije</th>{% endif %}
             </tr>
@@ -21,31 +22,23 @@
                     {% if show_category %}
                         <td>{% if item.category %}{{ item.category.name }}{% endif %}</td>
                     {% endif %}
-                    <td>
-                        <a href="{% url 'core:boqitem-detail' item.pk %}">
-                            {{item.title|truncatechars:200|default:"—" }}
+                    <td title="{{ item.title }}">
+                        <a href="{% url 'core:boqitem-detail' item.pk %}" class="text-decoration-none text-reset">
+                            {{ item.title|default:"(bez naziva)"|truncatechars:200 }}
                         </a>
                     </td>
                     <td>{{ item.uom }}</td>
-                    <td class="text-end">{{ item.contract_qty|floatformat:1 }}</td>
-                    <td class="text-end">{{ item.unit_price }}</td>
-
+                    <td class="text-end dt-right">{{ item.contract_qty|floatformat:1 }}</td>
+                    <td class="text-end dt-right">{{ item.unit_price }}</td>
                     {% if show_actions %}
-                    <td class="text-end text-nowrap">
-                        <a class="btn btn-outline-success btn-sm"
-                           href="{% url 'core:sheet-create' %}?boq={{ item.id }}"
-                           title="Novi GK list">
+                    <td class="text-end text-nowrap dt-actions">
+                        <a class="btn btn-outline-success btn-sm" href="{% url 'core:sheet-create' %}?boq={{ item.id }}" title="Novi GK list">
                            <i class="fas fa-plus"></i> GK
                         </a>
-                        <a class="btn btn-outline-primary btn-sm"
-                           href="{% url 'core:boqitem-update' item.pk %}"
-                           title="Izmeni">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'core:boqitem-update' item.pk %}" title="Izmeni">
                            <i class="fas fa-edit"></i>
                         </a>
-                        <a class="btn btn-outline-danger btn-sm"
-                           href="{% url 'core:boqitem-delete' item.pk %}"
-                           title="Obriši"
-                           onclick="return confirm('Obrisati stavku {{ item.code }}?');">
+                        <a class="btn btn-outline-danger btn-sm" href="{% url 'core:boqitem-delete' item.pk %}" title="Obrisi" onclick="return confirm('Obrisati stavku {{ item.code }}?');">
                            <i class="fas fa-trash"></i>
                         </a>
                     </td>
@@ -55,7 +48,28 @@
         </tbody>
     </table>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var selector = '#{{ table_id }}';
+        if (typeof $ === 'undefined' || !$.fn.dataTable || !document.querySelector(selector)) {
+            return;
+        }
+        if ($.fn.DataTable.isDataTable(selector)) {
+            return;
+        }
+        $(selector).DataTable({
+            order: [[0, 'asc']],
+            columnDefs: [
+                { targets: 'dt-actions', orderable: false, searchable: false },
+                { targets: 'dt-right', className: 'text-end' }
+            ],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Sve']]
+        });
+    });
+</script>
 {% else %}
     <p class="text-body-secondary mb-0">{{ message }}</p>
 {% endif %}
+{% endwith %}
 {% endwith %}

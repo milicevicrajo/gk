@@ -466,6 +466,7 @@ class GKSheetCreateView(CreateView):
             # ali ga prikazujemo kao "" jer je slobodan
             "period_from": None,
             "period_to": None,
+            "default_url" : reverse("core:project-detail", args=[self.project.pk]),
 
         })
         print(ctx)

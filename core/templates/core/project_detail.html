@@ -2,6 +2,12 @@
 
 {% block title %}Projekat {{ project.name }}{% endblock %}
 
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -81,18 +87,18 @@
                     </ul>
                     <div class="tab-content pt-3">
                     <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
-                        {% include "core/partials/_boq_table.html" with items=all_items show_category=True show_actions=True %}
+                        {% include "core/partials/_boq_table.html" with items=all_items show_category=True show_actions=True table_id="boq-table-overview" %}
                     </div>
 
                     {% for category in categories %}
                         <div class="tab-pane fade" id="tab-category-{{ category.pk }}" role="tabpanel">
-                        {% include "core/partials/_boq_table.html" with items=category.items.all show_category=False show_actions=True %}
+                        {% include "core/partials/_boq_table.html" with items=category.items.all show_category=False show_actions=True table_id="boq-table-category-"|add:category.pk %}
                         </div>
                     {% endfor %}
 
                     {% if uncategorised_items %}
                         <div class="tab-pane fade" id="tab-uncategorised" role="tabpanel">
-                        {% include "core/partials/_boq_table.html" with items=uncategorised_items show_category=False show_actions=True empty_message="Nema nekategorizovanih stavki." %}
+                        {% include "core/partials/_boq_table.html" with items=uncategorised_items show_category=False show_actions=True empty_message="Nema nekategorizovanih stavki." table_id="boq-table-uncategorised" %}
                         </div>
                     {% endif %}
                     </div>
@@ -107,38 +113,38 @@
     <form method="post" action="{% url 'core:boq_import' project.pk %}" enctype="multipart/form-data" class="modal-content">
       {% csrf_token %}
       <div class="modal-header">
-        <h5 class="modal-title" id="boqImportLabel">Import BoQ — {{ project.name }}</h5>
+        <h5 class="modal-title" id="boqImportLabel">Import BoQ za {{ project.name }}</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Zatvori">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
       <div class="modal-body">
-        {# Ako u contextu proslediš Django formu (BoQExcelUploadForm), koristi je ovde.
+        {# Ako u contextu prosledis Django formu (BoQExcelUploadForm), koristi je ovde.
            U suprotnom, plain inputi ispod rade odmah. #}
 
         {# Plain file input (radi bez forme u contextu) #}
         <div class="form-group">
           <label for="id_excel">Excel fajl (.xls, .xlsx)</label>
           <input type="file" name="excel" accept=".xls,.xlsx" required class="form-control-file" id="id_excel">
-          <small class="form-text text-muted">Odaberi obračun (BoQ) Excel koji će biti uvezen.</small>
+          <small class="form-text text-muted">Odaberi obracun (BoQ) Excel koji ce biti uvezen.</small>
         </div>
 
         <div class="custom-control custom-checkbox">
           <input type="checkbox" class="custom-control-input" id="id_clear_existing" name="clear_existing">
           <label class="custom-control-label" for="id_clear_existing">
-            Obriši postojeće stavke i kategorije pre importa
+            Obrisi postojece stavke i kategorije pre importa
           </label>
         </div>
 
         <hr class="my-3">
         <p class="text-muted mb-0">
-          Import kreira/azurira stavke po šifri (code = position_id) i otvara/azurira kategorije po redosledu sheet-ova.
+          Import kreira/azurira stavke po sifri (code = position_id) i otvara/azurira kategorije po redosledu sheet-ova.
         </p>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Otkaži</button>
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Otkazi</button>
         <button type="submit" class="btn btn-success">Pokreni import</button>
       </div>
     </form>
