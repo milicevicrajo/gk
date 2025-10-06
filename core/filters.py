@@ -2,11 +2,16 @@
 import django_filters as df
 from django_select2.forms import Select2Widget, ModelSelect2Widget
 from .models import GKSheet, Project, BoQItem
+from django import forms
+from django_select2.forms import Select2Widget
+from .models import Project
+import django_filters
+from .models import BoQItem, Project
 
 class BoQByProjectSelect2(ModelSelect2Widget):
     """
     Select2 widget sa pretragom za BoQItem.
-    Optional: forward=["project"] – zavisi od polja 'project' u istoj formi.
+    Optional: forward=["project"] - zavisi od polja 'project' u istoj formi.
     """
     model = BoQItem
     search_fields = [
@@ -23,6 +28,18 @@ class BoQByProjectSelect2(ModelSelect2Widget):
             # django-select2 prosleđuje vrednost iz polja 'project' pod tim imenom
             self.forward = forward  # npr. ["project"]
 
+
+class BoQItemFilter(django_filters.FilterSet):
+    project = django_filters.ModelChoiceFilter(
+        queryset=Project.objects.order_by("name"),
+        label="Projekat",
+        empty_label="Svi projekti"
+    )
+
+    class Meta:
+        model = BoQItem
+        fields = ["project"]
+    
 
 class GKSheetFilter(df.FilterSet):
     project = df.ModelChoiceFilter(

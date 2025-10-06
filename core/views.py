@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
-from django.db.models import F, Prefetch, Sum
+from django.db.models import Count, F, Prefetch, Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -21,7 +21,7 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from django_filters.views import FilterView
 
-from .filters import GKSheetFilter
+from .filters import GKSheetFilter, BoQItemFilter
 from .forms import (
     BoQCategoryForm,
     BoQExcelUploadForm,
@@ -154,24 +154,27 @@ class ProjectDeleteView(RoleRequiredMixin, DeleteView):
         return context
 
 
-class BoQItemListView(RoleRequiredMixin, ListView):
+class BoQItemListView(RoleRequiredMixin, FilterView):
     model = BoQItem
     context_object_name = "boq_items"
     template_name = "core/boqitem_list.html"
+    filterset_class = BoQItemFilter
     roles = ("izvodjac", "nadzor", "investitor")
 
     def get_queryset(self):
-        queryset = BoQItem.objects.select_related("project").order_by("project__name", "code")
-        project_id = self.request.GET.get("project")
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-        return queryset
+        qs = (
+            BoQItem.objects
+            .select_related("project")
+            .annotate(sheet_count=Count("gk_sheets"))
+            .order_by("project__name", "code")
+        )
+        return qs
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["projects"] = Project.objects.order_by("name")
-        context["selected_project"] = self.request.GET.get("project", "")
-        context["can_manage"] = user_has_any_role(self.request.user, ("admin", "izvodjac"))
+        context["can_manage"] = user_has_any_role(
+            self.request.user, ("admin", "izvodjac")
+        )
         return context
 
 class BoQItemDetailView(DetailView):
@@ -232,7 +235,7 @@ class BoQCategoryCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, 'Kategorija je saÄuvana.')
+        messages.success(self.request, 'Kategorija je sacuvana.')
         return response
 
     def get_success_url(self) -> str:
@@ -338,7 +341,7 @@ class BoQImportView(LoginRequiredMixin, View):
         upload = form.cleaned_data["excel"]
         clear_existing = form.cleaned_data["clear_existing"]
 
-        # Sačuvaj upload u privremeni fajl (jer import_boq_excel očekuje path)
+        # Sacuvaj upload u privremeni fajl (jer import_boq_excel ocekuje path)
         with NamedTemporaryFile(delete=False, suffix=Path(upload.name).suffix) as tmp:
             for chunk in upload.chunks():
                 tmp.write(chunk)
@@ -351,24 +354,24 @@ class BoQImportView(LoginRequiredMixin, View):
                 clear_existing=clear_existing,
             )
             msg = (
-                f"Import OK — kategorije: {stats['categories']}, "
-                f"kreirano: {stats['created']}, ažurirano: {stats['updated']}, "
-                f"preskočeno: {stats['skipped']}."
+                f"Import OK - kategorije: {stats['categories']}, "
+                f"kreirano: {stats['created']}, azurirano: {stats['updated']}, "
+                f"preskoceno: {stats['skipped']}."
             )
             messages.success(request, msg)
             if stats.get("warnings"):
                 for w in stats["warnings"]:
                     messages.warning(request, w)
         except Exception as e:
-            messages.error(request, f"Greška pri importu: {e}")
+            messages.error(request, f"Greska pri importu: {e}")
         finally:
-            # očisti privremeni fajl
+            # ocisti privremeni fajl
             try:
                 tmp_path.unlink(missing_ok=True)
             except Exception:
                 pass
 
-        # vrati na projekat ili na istu formu — po želji
+        # vrati na projekat ili na istu formu po zelji
         return redirect(reverse("core:project-detail", args=[project.id]))
 
 class GKSheetListView(RoleRequiredMixin, FilterView):
@@ -412,14 +415,14 @@ class GKSheetDetailView(RoleRequiredMixin, DetailView):
         context['prev_sheet'] = GKSheet.objects.filter(
             boq_item=sheet.boq_item,
             seq_no__lt=sheet.seq_no # 'less than'
-        ).order_by('-seq_no').first() # Uzimamo najveći seq_no koji je manji
+        ).order_by('-seq_no').first() # Uzimamo najveci seq_no koji je manji
 
-        # 2. Pronalaženje SLEDEĆEG lista:
-        # Tražimo sheet sa istim boq_item_id i seq_no VEĆIM od trenutnog
+        # 2. Pronalazenje SLEDECEG lista:
+        # Trazimo sheet sa istim boq_item_id i seq_no VECIM od trenutnog
         context['next_sheet'] = GKSheet.objects.filter(
             boq_item=sheet.boq_item,
             seq_no__gt=sheet.seq_no # 'greater than'
-        ).order_by('seq_no').first() # Uzimamo najmanji seq_no koji je veći
+        ).order_by('seq_no').first() # Uzimamo najmanji seq_no koji je veci
 
         return context
 
@@ -445,7 +448,7 @@ class GKSheetCreateView(CreateView):
             .aggregate(total=Sum("qty_this_period"))["total"] or Decimal("0.000")
         ).quantize(Decimal("0.001"))
 
-        # sledeći redni broj lista (seq_no) = max+1
+        # sledeci redni broj lista (seq_no) = max+1
         last = GKSheet.objects.filter(boq_item=self.boq_item).order_by("-seq_no").first()
         next_seq = (last.seq_no + 1) if last else 1
 
@@ -460,7 +463,7 @@ class GKSheetCreateView(CreateView):
             "contract_qty": getattr(self.boq_item, "contract_qty", None),
             "prev_approved_sum": prev_approved_sum,
             # informativno: period ostavljamo da se NE unosi (po zahtevu),
-            # ali ga prikazujemo kao "—" jer je slobodan
+            # ali ga prikazujemo kao "" jer je slobodan
             "period_from": None,
             "period_to": None,
 
@@ -470,18 +473,18 @@ class GKSheetCreateView(CreateView):
         
    
     def form_valid(self, form):
-        # >>> KLJUČNO: commit=False pa ručno setujemo FK pre .save()
+        # >>> KLJUCNO: commit=False pa rucno setujemo FK pre .save()
         obj = form.save(commit=False)
         obj.project = self.project
         obj.boq_item = self.boq_item
         obj.created_by = self.request.user
-        # seq_no će tvoj model sam dodeliti, ali možeš i ovde ako želiš pre poruke
-        obj.save()  # sada model.save() ima postavljen boq_item i neće pucati
-        # po želji poruka i redirect
+        # seq_no ce tvoj model sam dodeliti, ali mozes i ovde ako zelis pre poruke
+        obj.save()  # sada model.save() ima postavljen boq_item i nece pucati
+        # po zelji poruka i redirect
         return redirect(self.get_success_url())
     
     def get_success_url(self):
-        # Po želji: na detalj projekta ili na listu listova za BoQ stavku
+        # Po zelji: na detalj projekta ili na listu listova za BoQ stavku
         return reverse("core:project-detail", kwargs={"pk": self.project.pk})
 
 class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
@@ -557,3 +560,4 @@ def sheet_pdf(request, pk):
     response["Content-Disposition"] = f'attachment; filename=sheet_{pk}.pdf'
 
     return response
+
