@@ -23,7 +23,7 @@
                     {% endif %}
                     <td>
                         <a href="{% url 'core:boqitem-detail' item.pk %}">
-                            {{ item.title }}
+                            {{item.title|truncatechars:200|default:"—" }}
                         </a>
                     </td>
                     <td>{{ item.uom }}</td>

@@ -1,136 +1,255 @@
 {% extends "base.html" %}
 {% block a4_content %}
-
-<div class="a4-host">
-  <div class="a4-scroller">
-    <div class="a4-viewport">
-      <section class="a4-page">
-
-        <div class="sheet-header">
-          <div class="meta-line">
-            <div class="meta-item">Gradilište: <span class="dotted">{{ sheet.project.name }}</span></div>
-            <div class="meta-item">Lokacija: <span class="dotted">{{ sheet.project.location }}</span></div>
-            <div class="meta-item">Objekat: <span class="dotted"></span></div>
-          </div>
-
-          <div class="title-line">
-            <div class="title">
-              <h3>Obračunski list građevinske knjige</h3>
-
-            </div>
-            <div class="list-number">List broj: <strong>L{{ sheet.seq_no|stringformat:"04d" }}</strong></div>
-          </div>
-        </div>
-
-        <!-- META BLOK (čisti tekst) -->
-        <table class="meta-table join-bottom">
-          <colgroup>
-            <col style="width:38%">
-            <col style="width:16%">
-            <col style="width:14%">
-            <col style="width:16%">
-            <col style="width:16%">
-          </colgroup>
-          <tr>
-            <td colspan="2">
-              Vrsta radova:
-              <span class="dotted" title="{{ sheet.boq_item.title }}">
-                {{ sheet.boq_item.title|truncatechars:110|default:"—" }}
-              </span>
-            </td>
-            <td>
-              Grad. norma <span class="dotted"></span><br>
-              <span class="small">Šifra</span> <span class="dotted w60"></span>
-            </td>
-            <td>Obrač. nacrta br. <span class="dotted"></span></td>
-            <td>
-              Poz. predrač. br.
-              <span class="dotted">{{ sheet.boq_item.code }}</span>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="4">
-              Jedinična cena
-              <span class="dotted">{{ sheet.boq_item.unit_price|floatformat:3 }}</span>
-              <span class="small">po</span>
-              <span class="dotted w60">{{ sheet.boq_item.uom}}</span>
-            </td>
-            <td>
-              Mera
-              <span class="dotted w60">{{ sheet.boq_item.uom}}</span>
-              </span>
-            </td>
-          </tr>
-        </table>
-
-        <!-- GLAVNI GRID: prikaz unetog teksta i količina -->
-        <div class="grid-flex">
-          <table class="grid-main">
-            <colgroup>
-              <col style="width:60%">
-              <col style="width:20%">
-              <col style="width:20%">
-            </colgroup>
-            <thead>
-              <tr>
-                <th>A, B, A+B</th>
-                <th>Mesečno</th>
-                <th>Ukupno (kumulativ)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="tall">
-                  {{ sheet.opis_izvedenih_radova|default:"—"|linebreaksbr }}
-                </td>
-                <td class="tall right">
-                  {{ sheet.qty_this_period|floatformat:3 }}
-                </td>
-                <td class="tall right">
-                  {{ sheet.qty_cumulative|floatformat:3 }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- INFO: ugovorena i preostala količina ako postoje -->
-        {% comment %} <div class="mt-2 small">
-          {% if sheet.boq_item.contract_qty %}
-            Ugovorena količina: <strong>{{ sheet.boq_item.contract_qty|floatformat:3 }}</strong>
-            {% if remaining_qty is not None %}
-              &nbsp;|&nbsp; Preostalo: <strong>{{ remaining_qty|floatformat:3 }}</strong>
-            {% endif %}
-          {% endif %}
-        </div> {% endcomment %}
-
-        <!-- POTPISI -->
-        <div style="margin-top:10mm; display:flex; justify-content:space-between;">
-          <div>Izradio: _____________________</div>
-          <div>Overio: _____________________</div>
-        </div>
-
-      </section>
-      <div class="mt-1 small">
-        Status:
-        <span class="badge bg-secondary">{{ sheet.get_status_display }}</span>
-      </div>
-
-      <p>Kreirano: {{ sheet.created_at|date:"d.m.Y. H:i" }}</p>
-      <p>Izmenjeno: {{ sheet.updated_at|date:"d.m.Y. H:i" }}</p>
-
-      <div class="mt-3" style="display:flex; gap:.5rem; justify-content:flex-end;">
-        <a href="{% url 'core:project-detail' sheet.project.id %}" class="btn btn-outline-secondary">Nazad na projekat</a>
-        <a href="{% url 'core:sheet-list' %}" class="btn btn-outline-secondary">Lista listova</a>
-        {% if can_manage %}
-          {# Po želji: dodaj i linkove za izmenu/brisanje ako imaš URL-ove #}
-          {# <a href="{% url 'core:gksheet-update' sheet.id %}" class="btn btn-primary">Izmeni</a> #}
-          {# <a href="{% url 'core:gksheet-delete' sheet.id %}" class="btn btn-danger">Obriši</a> #}
+<div class="navigation-wrapper d-flex justify-content-center align-items-center" style="gap: 20px;">    
+    <div class="nav-prev">
+        {% if prev_sheet %}
+            <a href="{% url 'core:sheet-detail' prev_sheet.pk %}" class="btn btn-primary btn-lg d-flex flex-column align-items-center" style="min-width: 150px;">
+                <i class="bi bi-arrow-left fs-3"></i> 
+                <span>Prethodni list</span>
+                <small>L{{ prev_sheet.seq_no|stringformat:"04d" }}</small>
+            </a>
+        {% else %}
+            <button class="btn btn-light btn-lg" style="min-width: 150px; visibility: hidden;" disabled>Prev</button>
         {% endif %}
-      </div>
-
     </div>
-  </div>
-</div>
+    <div class="a4-host">
+      <div class="a4-scroller">
+        <div class="a4-viewport">
+          <section class="a4-page">
 
+            <div class="sheet-header">
+              <div class="meta-line">
+                <div class="meta-item">Gradilište: <span class="dotted">{{ sheet.project.name }}</span></div>
+                <div class="meta-item">Lokacija: <span class="dotted">{{ sheet.project.location }}</span></div>
+                <div class="meta-item">Objekat: <span class="dotted"></span></div>
+              </div>
+
+              <div class="title-line">
+                <div class="title">
+                  <h3>Obračunski list građevinske knjige</h3>
+
+                </div>
+                <div class="list-number">List broj: <strong>L{{ sheet.seq_no|stringformat:"04d" }}</strong></div>
+              </div>
+            </div>
+
+            <!-- META BLOK (čisti tekst) -->
+            <table class="meta-table join-bottom">
+              <colgroup>
+                <col style="width:38%">
+                <col style="width:16%">
+                <col style="width:14%">
+                <col style="width:16%">
+                <col style="width:16%">
+              </colgroup>
+              <tr>
+                <td colspan="2">
+                  Vrsta radova:
+                  <span class="dotted" title="{{ sheet.boq_item.title }}">
+                    {{ sheet.boq_item.title|truncatechars:110|default:"—" }}
+                  </span>
+                </td>
+                <td>
+                  Grad. norma <span class="dotted"></span><br>
+                  <span class="small">Šifra</span> <span class="dotted w60"></span>
+                </td>
+                <td>Obrač. nacrta br. <span class="dotted"></span></td>
+                <td>
+                  Poz. predrač. br.
+                  <span class="dotted">{{ sheet.boq_item.code }}</span>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4">
+                  Jedinična cena
+                  <span class="dotted">{{ sheet.boq_item.unit_price|floatformat:3 }}</span>
+                  <span class="small">po</span>
+                  <span class="dotted w60">{{ sheet.boq_item.uom}}</span>
+                </td>
+                <td>
+                  Mera
+                  <span class="dotted w60">{{ sheet.boq_item.uom}}</span>
+                  </span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- GLAVNI GRID: prikaz unetog teksta i količina -->
+            <div class="grid-flex">
+              <table class="grid-main">
+                <colgroup>
+                  <col style="width:60%">
+                  <col style="width:20%">
+                  <col style="width:20%">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>A, B, A+B</th>
+                    <th>Mesečno</th>
+                    <th>Ukupno (kumulativ)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="tall">
+                      {{ sheet.opis_izvedenih_radova|default:"—"|linebreaksbr }}
+                    </td>
+                    <td class="tall right">
+                      {{ sheet.qty_this_period|floatformat:3 }}
+                    </td>
+                    <td class="tall">
+                        <div style="text-align: right; font-weight: bold;">
+                            Prenos:
+                        </div>
+
+                        <div style="text-align: right; margin-bottom: 5px;">
+                            {{ prev_approved_sum }}
+                        </div>
+
+                        <div style="text-align: right; font-weight: bold;">
+                            Ukupno:
+                        </div>
+
+                        <div style="text-align: right;">
+                            {{ sheet.qty_cumulative }}
+                        </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- INFO: ugovorena i preostala količina ako postoje -->
+            {% comment %} <div class="mt-2 small">
+              {% if sheet.boq_item.contract_qty %}
+                Ugovorena količina: <strong>{{ sheet.boq_item.contract_qty|floatformat:3 }}</strong>
+                {% if remaining_qty is not None %}
+                  &nbsp;|&nbsp; Preostalo: <strong>{{ remaining_qty|floatformat:3 }}</strong>
+                {% endif %}
+              {% endif %}
+            </div> {% endcomment %}
+
+            <!-- POTPISI -->
+            <div style="margin-top:10mm; display:flex; justify-content:space-between;">
+              <div>Izradio: _____________________</div>
+              <div>Overio: _____________________</div>
+            </div>
+
+          </section>
+
+          <div class="d-flex align-items-center gap-2">
+              <span class="text-muted">Trenutni status:</span>
+              
+              {# 1. Koristi sheet.status za proveru, a ne get_status_display #}
+              {% with st=sheet.status %} 
+                  <span class="badge 
+                      {% if st == 'draft' %}bg-secondary text-white
+                      {% elif st == 'submitted' %}bg-info text-dark
+                      {% elif st == 'approved' %}bg-success text-white
+                      {% elif st == 'rejected' %}bg-danger text-white
+                      {% elif st == 'locked' %}bg-dark text-white
+                      {% else %}bg-light text-dark{% endif %}">
+                      
+                      {# 2. Koristi get_status_display na samom sheet objektu za tekstualni prikaz #}
+                      {{ sheet.get_status_display }} 
+                  </span>
+              {% endwith %}
+          </div>
+          <p>Kreirano: {{ sheet.created_at|date:"d.m.Y. H:i" }}</p>
+          <p>Izmenjeno: {{ sheet.updated_at|date:"d.m.Y. H:i" }}</p>
+
+          <div class="text-end text-nowrap">
+
+            <!-- Preuzmi PDF -->
+            <a href="{% url 'core:sheet-pdf' pk=sheet.pk %}" 
+              class="btn btn-success">
+              <i class="bi bi-file-earmark-pdf"></i> Preuzmi PDF
+            </a>
+
+            <!-- Štampaj u pretraživaču -->
+            <button type="button" class="btn btn-info text-white" onclick="window.print()">
+              <i class="bi bi-printer"></i> Štampaj
+            </button>
+
+            <!-- Povratak na projekat -->
+            <a href="{% url 'core:project-detail' sheet.project.id %}" 
+              class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left-circle"></i> Projekat
+            </a>
+
+            <!-- Povratak na listu -->
+            <a href="{% url 'core:sheet-list' %}" 
+              class="btn btn-outline-secondary">
+              <i class="bi bi-list-ul"></i> Lista listova
+            </a>
+
+            {% if can_manage %}
+
+            {% endif %}
+
+
+          </div>
+        <hr/>
+
+
+        </div>
+      </div>
+    </div>
+    <div class="nav-next">
+        {% if next_sheet %}
+            <a href="{% url 'core:sheet-detail' next_sheet.pk %}" class="btn btn-primary btn-lg d-flex flex-column align-items-center" style="min-width: 150px;">
+                <i class="bi bi-arrow-right fs-3"></i> 
+                <span>Sledeći list</span>
+                <small>L{{ next_sheet.seq_no|stringformat:"04d" }}</small>
+            </a>
+        {% else %}
+            <button class="btn btn-light btn-lg" style="min-width: 150px; visibility: hidden;" disabled>Next</button>
+        {% endif %}
+    </div>
+    <style>
+      @media print {
+          /* 1. SAKRIJTE SVE OSTALO */
+          .top-navigation, 
+          .nav-prev, .nav-next,
+          .d-flex:has(> .text-muted),
+          .mt-3,                     
+          p:contains("Kreirano:"),
+          p:contains("Izmenjeno:") {
+              display: none !important;
+          }
+
+          /* 2. POZICIONIRANJE I MARGINE */
+          .navigation-wrapper {
+              display: block !important;
+              padding: 0 !important;
+              margin: 0 !important;
+          }
+          
+          /* Postavlja A4 host da popuni celu širinu i UKLANJA senke/granice */
+          .a4-host {
+              width: 100% !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              box-shadow: none !important;
+              border: none !important;
+              
+              /* Simulišemo 1cm margina postavljanjem paddinga na samoj sekciji unutar A4 hosta */
+          }
+
+          /* 3. SIMULACIJA SKALE (135%) i VIZUELNIH MARGINA (1 cm) */
+          .a4-page {
+              /* Postavite virtuelne margine od 1cm oko sadržaja */
+              padding: 1cm !important; 
+              
+              /* Skaliranje sadržaja (simulira 135% skale) */
+              transform: scale(1.35) !important;
+              transform-origin: top left !important; /* Osigurava da se skala ne pomera iz centra */
+              
+              /* Uklanja neželjene margine */
+              margin: 0 !important;
+              /* Ako je skala prevelika, možda ćete morati smanjiti širinu: */
+              /* width: 700px !important; */ 
+          }
+      }
+    </style>
 {% endblock %}

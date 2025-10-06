@@ -1,40 +1,40 @@
 ﻿from __future__ import annotations
 
-from typing import Any, Optional
+import asyncio
+from playwright.async_api import async_playwright
 from decimal import Decimal
-from typing import Any
-from django.db.models import F
-from django_filters.views import FilterView
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import Any, Optional
 
-from .models import GKSheet
-from .filters import GKSheetFilter
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.conf import settings
 from django.contrib import messages
-from django.db.models import Prefetch
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
-from django.http import HttpRequest
-from django.shortcuts import render
+from django.db.models import F, Prefetch, Sum
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
+from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django_filters.views import FilterView
 
-from .forms import BoQCategoryForm, BoQItemForm, GKSheetForm, ProjectForm
+from .filters import GKSheetFilter
+from .forms import (
+    BoQCategoryForm,
+    BoQExcelUploadForm,
+    BoQItemForm,
+    GKSheetCreateForm,
+    GKSheetForm,
+    ProjectForm,
+)
 from .models import BoQCategory, BoQItem, GKSheet, Project
 from .permissions import user_has_any_role, user_has_role
-from tempfile import NamedTemporaryFile
-from pathlib import Path
-
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.views import View
-
-from .forms import BoQExcelUploadForm
-from .models import Project
 from .utils.boq_import import import_boq_excel
-from django.db.models import Sum
-from .forms import GKSheetCreateForm
+
+
 
 class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     roles: tuple[str, ...] = ()
@@ -408,6 +408,19 @@ class GKSheetDetailView(RoleRequiredMixin, DetailView):
         if contract_qty is not None:
             remaining = (contract_qty or Decimal('0')) - (sheet.qty_cumulative or Decimal('0'))
         context["remaining_qty"] = remaining
+        context['prev_approved_sum'] = sheet._prev_approved_sum()
+        context['prev_sheet'] = GKSheet.objects.filter(
+            boq_item=sheet.boq_item,
+            seq_no__lt=sheet.seq_no # 'less than'
+        ).order_by('-seq_no').first() # Uzimamo najveći seq_no koji je manji
+
+        # 2. Pronalaženje SLEDEĆEG lista:
+        # Tražimo sheet sa istim boq_item_id i seq_no VEĆIM od trenutnog
+        context['next_sheet'] = GKSheet.objects.filter(
+            boq_item=sheet.boq_item,
+            seq_no__gt=sheet.seq_no # 'greater than'
+        ).order_by('seq_no').first() # Uzimamo najmanji seq_no koji je veći
+
         return context
 
 
@@ -425,7 +438,7 @@ class GKSheetCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-
+        sheet = self.object
         # prethodno odobren kumulativ za ovu BoQ poziciju
         prev_approved_sum = (
             GKSheet.objects.filter(boq_item=self.boq_item, status="approved")
@@ -450,9 +463,11 @@ class GKSheetCreateView(CreateView):
             # ali ga prikazujemo kao "—" jer je slobodan
             "period_from": None,
             "period_to": None,
-        })
-        return ctx
 
+        })
+        print(ctx)
+        return ctx
+        
    
     def form_valid(self, form):
         # >>> KLJUČNO: commit=False pa ručno setujemo FK pre .save()
@@ -486,6 +501,7 @@ class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
+
         sheet: GKSheet = context["sheet"]
         context["title"] = "Izmena lista GK"
         contract_qty = getattr(sheet.boq_item, 'contract_qty', None)
@@ -493,6 +509,7 @@ class GKSheetUpdateView(RoleRequiredMixin, UpdateView):
         if contract_qty is not None:
             remaining = (contract_qty or Decimal('0')) - (sheet.qty_cumulative or Decimal('0'))
         context["remaining_qty"] = remaining
+        context['prev_approved_sum'] = sheet._prev_approved_sum()
         return context
 
 
@@ -516,4 +533,27 @@ def index(request: HttpRequest):
     return render(request, "core/index.html", {"stats": stats})
 
 
+def sheet_print(request, pk):
+    sheet = get_object_or_404(GKSheet, pk=pk)
+    return render(request, "core/sheet_print.html", {"sheet": sheet})
 
+async def render_pdf(url: str) -> bytes:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url, wait_until="networkidle")
+        pdf_bytes = await page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "0mm", "right": "0mm", "bottom": "0mm", "left": "0mm"}
+        )
+        await browser.close()
+        return pdf_bytes
+
+def sheet_pdf(request, pk):
+    url = request.build_absolute_uri(f"/sheets/{pk}/print/")
+    pdf_bytes = asyncio.run(render_pdf(url))
+    response = HttpResponse(pdf_bytes, content_type="application/octet-stream")
+    response["Content-Disposition"] = f'attachment; filename=sheet_{pk}.pdf'
+
+    return response

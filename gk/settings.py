@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import environ
 import dj_database_url
+import shutil
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -116,3 +117,17 @@ LOGIN_REDIRECT_URL = "core:index"
 LOGOUT_REDIRECT_URL = "core:login"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# WKHTMLTOPDF_CMD = shutil.which("wkhtmltopdf")
+# Ako NISI dodao u PATH, postavi punu putanju:
+WKHTMLTOPDF_CMD = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+
+PDFKIT_OPTIONS = {
+    "page-size": "A4",
+    "margin-top": "10mm",
+    "margin-right": "10mm",
+    "margin-bottom": "12mm",
+    "margin-left": "10mm",
+    "encoding": "UTF-8",
+    "enable-local-file-access": None,  # važno za CSS/IMG iz static/
+}

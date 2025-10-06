@@ -29,4 +29,9 @@ urlpatterns = [
     path("sheets/<int:pk>/", views.GKSheetDetailView.as_view(), name="sheet-detail"),
     path("sheets/<int:pk>/edit/", views.GKSheetUpdateView.as_view(), name="sheet-update"),
     path("sheets/<int:pk>/delete/", views.GKSheetDeleteView.as_view(), name="sheet-delete"),
+    path("sheets/<int:pk>/print/", views.sheet_print, name="sheet-print"),
+    path("sheets/<int:pk>/pdf/", views.sheet_pdf, name="sheet-pdf"),
+
+
+
 ]

@@ -100,6 +100,7 @@ class GKSheet(models.Model):
     qty_this_period = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
     qty_cumulative  = models.DecimalField(max_digits=16, decimal_places=3, default=Decimal("0.000"))
 
+
     opis_izvedenih_radova = models.TextField(blank=True)
     status = models.CharField(max_length=12, choices=STATUS, default="draft")
 
@@ -165,6 +166,8 @@ class GKSheet(models.Model):
 
         self.full_clean()  # osnovne validacije
         with transaction.atomic():
+            prev_approved_sum = self._prev_approved_sum() 
+            self.qty_prev_approved = prev_approved_sum  # <--- UPISIVANJE VREDNOSTI U NOVO POLJE
             # recompute kumulativ pre snimanja
             self.qty_cumulative = self._compute_cumulative()
             self._bounds_check()

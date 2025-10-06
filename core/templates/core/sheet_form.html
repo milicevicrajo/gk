@@ -86,8 +86,21 @@
                     {% endif %}
                   </td>
                   <td class="tall">
-                    <input class="sheet-input right" type="text"
-                           value="{{ sheet.qty_cumulative }}" disabled>
+                      <div style="text-align: right; font-weight: bold;">
+                          Prenos:
+                      </div>
+
+                      <div style="text-align: right; margin-bottom: 5px;">
+                          {{ prev_approved_sum }}
+                      </div>
+
+                      <div style="text-align: right; font-weight: bold;">
+                          Ukupno:
+                      </div>
+
+                      <div style="text-align: right;">
+                          {{ sheet.qty_cumulative }}
+                      </div>
                   </td>
                 </tr>
               </tbody>
